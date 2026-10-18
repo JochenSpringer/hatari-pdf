@@ -1,0 +1,22 @@
+SCHRITT FUER SCHRITT (ca. 20 Minuten, kostenlos, nichts zu installieren)
+
+1. Konto anlegen: https://github.com -> "Sign up", E-Mail und Passwort, E-Mail bestaetigen.
+2. Oben rechts auf "+" -> "New repository".
+   Name: hatari-pdf    Haken bei "Private"    -> "Create repository".
+3. Auf der neuen Seite den Link "uploading an existing file" anklicken.
+4. Die ZIP-Datei hier vorher entpacken (Rechtsklick -> Alle extrahieren).
+   ALLES aus dem entpackten Ordner (Ordner src, tools und alle Dateien) mit der Maus
+   in das Browserfenster ziehen. Warten, bis alles hochgeladen ist.
+   Unten auf "Commit changes".
+5. Oben "Add file" -> "Create new file". Ins Namensfeld genau eintippen:
+       .github/workflows/build.yml
+   (beim Tippen von "/" entstehen die Ordner automatisch).
+   Den kompletten Text aus WORKFLOW-hier-kopieren.txt hineinkopieren,
+   dann "Commit changes" -> "Commit changes".
+6. Reiter "Actions" anklicken. Falls gefragt: gruenen Knopf "I understand my workflows,
+   go ahead and enable them". Der Lauf "Windows-Build" startet selbst (Kreis dreht sich).
+   Nach etwa 10-20 Minuten wird er gruen (Haken).
+7. Auf den Lauf klicken, nach unten zu "Artifacts", "hatari-win64" anklicken ->
+   ZIP wird heruntergeladen. Darin: hatari.exe, prn2pdf.exe und die DLLs.
+8. Ist der Lauf ROT: auf den roten Lauf klicken, den roten Schritt aufklappen, den Text
+   (oder einen Screenshot) hier im Chat an mich schicken. Dann behebe ich es.

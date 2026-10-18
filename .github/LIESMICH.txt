@@ -1,0 +1,2 @@
+Hatari mit PDF-Drucker - Build-Paket.
+Anleitung: siehe Antwort im Chat bzw. ANLEITUNG.txt.
