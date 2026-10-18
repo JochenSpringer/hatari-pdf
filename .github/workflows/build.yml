@@ -29,6 +29,17 @@ jobs:
             mingw-w64-x86_64-cmake mingw-w64-x86_64-gcc
             mingw-w64-x86_64-SDL2 mingw-w64-x86_64-zlib
             mingw-w64-x86_64-libpng
+      - name: 3b - Dateien an die richtige Stelle legen
+        run: |
+          echo "=== Struktur des Repositorys ==="
+          find . -maxdepth 4 -not -path './hatari-src/*' -not -path './.git/*' | sort | head -80
+          f=$(find . -name build-windows.sh -not -path './hatari-src/*' | head -1)
+          echo "build-windows.sh gefunden: $f"
+          dir=$(dirname "$f")
+          if [ -n "$f" ] && [ "$dir" != "." ]; then
+            echo "Dateien liegen in $dir - werden nach oben kopiert"
+            cp -r "$dir"/. .
+          fi
       - name: 4 - Dateien kontrollieren
         run: |
           ls
