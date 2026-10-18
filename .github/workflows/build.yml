@@ -10,36 +10,72 @@ jobs:
       run:
         shell: msys2 {0}
     steps:
-      - name: Eigene Dateien holen
+      - name: 1 - Eigene Dateien holen
         uses: actions/checkout@v4
-      - name: Hatari 2.6.1 holen
+      - name: 2 - Hatari 2.6.1 holen
         uses: actions/checkout@v4
         with:
           repository: hatari/hatari
           ref: v2.6.1
           path: hatari-src
-      - name: Werkzeuge installieren
+      - name: 3 - Werkzeuge installieren
         uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
           update: true
+          release: false
           install: >-
-            make git
+            make
             mingw-w64-x86_64-cmake mingw-w64-x86_64-gcc
             mingw-w64-x86_64-SDL2 mingw-w64-x86_64-zlib
-            mingw-w64-x86_64-libpng mingw-w64-x86_64-portmidi
-      - name: Hatari mit PDF-Drucker bauen
+            mingw-w64-x86_64-libpng
+      - name: 4 - Dateien kontrollieren
         run: |
-          chmod +x build-windows.sh
-          ./build-windows.sh "$PWD/hatari-src"
-      - name: prn2pdf.exe bauen
+          ls
+          ls hatari-src | head -30
+          ls src/pe/src
+          gcc --version
+          cmake --version
+      - name: 5 - PDF-Drucker in Hatari einbauen
+        run: cp -rv src/. hatari-src/src/
+      - name: 6 - Konfigurieren (cmake)
         run: |
+          cd hatari-src
+          mkdir -p build
+          cd build
+          cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+      - name: 7 - Bauen (make)
+        run: |
+          cd hatari-src/build
+          make -j4 2>&1 | tee make.log
+          test -f src/hatari.exe
+      - name: 8 - prn2pdf.exe bauen
+        run: |
+          mkdir -p dist
           gcc -std=gnu99 -O2 -s -DPE_HAVE_ZLIB \
             -Isrc/pe/include -Isrc/pe/src -Isrc/pe/src/drivers \
             src/pe/src/*.c src/pe/src/drivers/*.c src/pe/src/fonts/*.c \
             tools/prn2pdf.c -lz -static -o dist/prn2pdf.exe
-      - name: Ergebnis bereitstellen
+      - name: 9 - Auslieferungsordner packen
+        run: |
+          mkdir -p dist
+          cp hatari-src/build/src/hatari.exe dist/
+          cp hatari-src/gpl.txt hatari-src/readme.txt dist/
+          cp -r hatari-src/doc dist/doc
+          ldd dist/hatari.exe | awk '/\/mingw64\// {print $3}' | sort -u | while read -r dll; do cp -v "$dll" dist/; done
+          ls -la dist
+      - name: 10 - Ergebnis bereitstellen
         uses: actions/upload-artifact@v4
         with:
           name: hatari-win64
           path: dist/
+      - name: Bei Fehler - Protokoll bereitstellen
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fehlerprotokoll
+          path: |
+            hatari-src/build/make.log
+            hatari-src/build/CMakeFiles/CMakeError.log
+            hatari-src/build/CMakeFiles/CMakeOutput.log
+          if-no-files-found: ignore
