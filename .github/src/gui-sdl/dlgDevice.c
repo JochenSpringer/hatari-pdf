@@ -9,6 +9,9 @@
 const char DlgDevice_fileid[] = "Hatari dlgDevice.c";
 
 #include <assert.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include "main.h"
 #include "configuration.h"
 #include "dialog.h"
@@ -187,10 +190,32 @@ static void DlgDevice_PdfSetup(void)
 			File_ShrinkName(dlgPdfPaper, PrinterPdf_PaperName(paper), pdfdlg[PDFDLG_PAPERNAME].w);
 			break;
 		 case PDFDLG_BROWSE:
-			SDLGui_FileConfSelect("PDF output:", dlgPdfName,
-			                      ConfigureParams.Printer.szPdfFileName,
-			                      pdfdlg[PDFDLG_FILENAME].w,
-			                      true);
+			/* SDLGui_FileConfSelect() would clear the setting when only a
+			 * folder is chosen, so do the selection here: a folder is
+			 * accepted too, the files are then named hatari_<time>.pdf */
+			{
+				char *selname = SDLGui_FileSelect("PDF folder / file name:",
+				                                  ConfigureParams.Printer.szPdfFileName,
+				                                  NULL, true);
+				if (selname)
+				{
+					size_t len = strlen(selname);
+					if (len > 0 && (selname[len-1] == '/' || selname[len-1] == PATHSEP))
+					{
+						snprintf(ConfigureParams.Printer.szPdfFileName,
+						         sizeof(ConfigureParams.Printer.szPdfFileName),
+						         "%shatari.pdf", selname);
+					}
+					else if (len > 0)
+					{
+						Str_Copy(ConfigureParams.Printer.szPdfFileName, selname,
+						         sizeof(ConfigureParams.Printer.szPdfFileName));
+					}
+					File_ShrinkName(dlgPdfName, ConfigureParams.Printer.szPdfFileName,
+					                pdfdlg[PDFDLG_FILENAME].w);
+					free(selname);
+				}
+			}
 			break;
 		}
 	}

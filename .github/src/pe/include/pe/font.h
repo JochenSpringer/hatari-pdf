@@ -33,6 +33,9 @@ typedef struct {
  * optionally its proportional advance.  Unknown codes fall back to the
  * space glyph, so this never returns NULL for a usable font.
  */
+/* 1 if the font really has this glyph (pe_font_glyph falls back to space). */
+int pe_font_has(const pe_font *font, uint16_t code);
+
 const uint32_t *pe_font_glyph(const pe_font *font, uint16_t code,
                               uint8_t *advance);
 

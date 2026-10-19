@@ -67,6 +67,8 @@ typedef struct {
   uint8_t italic, underline, script, proportional, lq, dheight;
   uint8_t typeface;  /* index into caps->typefaces                    */
   uint8_t intl, msb_mode, upper_ok, autofeed;
+  uint8_t chartable; /* codes 128..255: 0 Atari ST, 1 Latin-1, 2 PC 850,
+                        3 PC 437 (ESC t); survives ESC @ like a DIP switch */
 
   /* page geometry, all in units */
   int32_t line_spacing;

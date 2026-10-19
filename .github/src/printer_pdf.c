@@ -141,6 +141,8 @@ bool PrinterPdf_Open(void)
 	if (!pe_timestamp_path(sPdfPath, sizeof(sPdfPath), dir, base))
 		return false;
 	pPdfJob = pe_job_create(drv, &cfg, sPdfPath);
+	if (pPdfJob)
+		Log_Printf(LOG_INFO, "Printer: writing PDF to %s\n", sPdfPath);
 	return pPdfJob != NULL;
 }
 
