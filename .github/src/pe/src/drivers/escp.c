@@ -166,7 +166,8 @@ static const pe_font *font_for(const escp *s) {
 
 static int32_t char_width(const escp *s) {
   int32_t w = s->condensed ? pitch_cond[s->cpi] : pitch_normal[s->cpi];
-  if (s->expanded || s->expanded_line) w *= 2;
+  if (s->fs_wide) w = w * 5 / 3; /* 39 characters = 6.5 inch at pica */
+  else if (s->expanded || s->expanded_line) w *= 2;
   return w;
 }
 
@@ -428,7 +429,9 @@ enum {
   ST_GFX_DATA,
   ST_HTABS,
   ST_VTABS,
-  ST_SKIP /* swallow n bytes of an unsupported extended command */
+  ST_SKIP, /* swallow n bytes of an unsupported extended command */
+  ST_FS,   /* NEC FS (0x1C) command: next byte selects it */
+  ST_FS_E  /* parameter of FS E: double width on/off */
 };
 
 void escp_reset(escp *s, pe_engine *e) {
@@ -480,6 +483,14 @@ static int param_count(escp *s, uint8_t cmd) {
     case ':': return 3;  /* copy ROM font to RAM - ignored          */
     case '$': return 2;
     case '\\': return 2;
+    case '(': return 3;  /* ESC ( c nL nH <nL+256*nH bytes>          */
+    /* further ESC/P and NEC commands that carry parameters; they have no
+     * visible effect here, but their bytes must not be printed as text */
+    case ' ': case '+': case '/': case 'h': case 'i': case 'm': case 'q':
+    case 'u': case 'y': case 'z':
+      return 1;
+    case 'X': case 'c': case 'e': case 'f':
+      return 2;
     default:
       (void)s;
       return 0;
@@ -618,6 +629,17 @@ static void exec_cmd(escp *s, pe_engine *e) {
         if (s->caps->typefaces[i].id == p[0]) s->typeface = (uint8_t)i;
       break;
 
+    case '(': {
+      /* ESC/P2 extended command: the data cannot be rendered, but it must
+       * not be printed as text either. */
+      uint32_t n = (uint32_t)p[1] + 256u * (uint32_t)p[2];
+      if (n > 0) {
+        s->skip = n;
+        s->st = ST_SKIP;
+        return;
+      }
+      break;
+    }
     /* ignored but consumed */
     case 'U': case 's': case 'I': case 'r': case 'a':
     case '%': case ':': case 25: case '<': case '9': case '8':
@@ -656,7 +678,29 @@ void escp_byte(escp *s, pe_engine *e, uint8_t b) {
       return;
 
     case ST_SKIP:
-      if (--s->want == 0) s->st = ST_DATA;
+      if (--s->skip == 0) s->st = ST_DATA;
+      return;
+
+    case ST_FS:
+      /* NEC Pinwriter FS commands.  FS E n is double width, FS C n (font
+       * card) and a few others carry one parameter we do not render, but
+       * neither the command letter nor the parameter may be printed. */
+      if (b == 'E') {
+        s->st = ST_FS_E;
+      } else if (b == 'C' || b == 'F' || b == 'G') {
+        s->skip = 1;
+        s->st = ST_SKIP;
+      } else {
+        s->st = ST_DATA;
+      }
+      return;
+
+    case ST_FS_E:
+      /* FS E n: wide print on (1) / off (0).  The 1st Word Plus driver
+       * switches it around the text of each line and justifies 39
+       * characters to 6.5 inch, so the wide cell is 5/3 of the pica cell. */
+      s->fs_wide = (b == 1 || b == '1');
+      s->st = ST_DATA;
       return;
 
     case ST_ESC:
@@ -670,13 +714,6 @@ void escp_byte(escp *s, pe_engine *e, uint8_t b) {
       if (b == 'B' || b == 'b') {
         s->nvtab = 0;
         s->st = ST_VTABS;
-        return;
-      }
-      if (b == '(') {
-        /* ESC/P2 extended command: ESC ( c nL nH <data>.  We cannot render
-         * these, but we must not print their payload as text. */
-        s->st = ST_SKIP;
-        s->want = 3;
         return;
       }
       s->want = (uint8_t)param_count(s, b);
@@ -728,6 +765,7 @@ void escp_byte(escp *s, pe_engine *e, uint8_t b) {
     case 0x14: s->expanded_line = 0; return; /* DC4  */
     case 0x18: return;                       /* CAN  */
     case 0x1B: s->st = ST_ESC; return;       /* ESC  */
+    case 0x1C: s->st = ST_FS; return;        /* FS   */
     case 0x7F: return;                       /* DEL  */
     default: break;
   }

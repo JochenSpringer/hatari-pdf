@@ -48,6 +48,7 @@ typedef struct {
   uint8_t cmd;
   uint8_t prm[4];
   uint8_t nprm, want;
+  uint32_t skip; /* payload bytes of an extended command still to swallow */
 
   /* bit image transfer in progress */
   int32_t gfx_cols;
@@ -67,6 +68,7 @@ typedef struct {
   uint8_t italic, underline, script, proportional, lq, dheight;
   uint8_t typeface;  /* index into caps->typefaces                    */
   uint8_t intl, msb_mode, upper_ok, autofeed;
+  uint8_t fs_wide;   /* FS E 1: NEC wide print (1.67 x, 6 cpi at pica) */
   uint8_t chartable; /* codes 128..255: 0 Atari ST, 1 Latin-1, 2 PC 850,
                         3 PC 437 (ESC t); survives ESC @ like a DIP switch */
 
