@@ -28,6 +28,7 @@ static const struct { const char *name; pe_paper paper; } Papers[] =
 {
 	{ "A4 single sheet",      PE_PAPER_A4 },
 	{ "Fanfold 12\"x240 mm",  PE_PAPER_A4_ENDLOS },
+	{ "Fanfold, green bars", PE_PAPER_A4_ENDLOS_GRUEN },
 };
 #define NUM_PAPERS ((int)(sizeof(Papers) / sizeof(Papers[0])))
 

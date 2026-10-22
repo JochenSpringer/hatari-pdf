@@ -19,13 +19,15 @@ extern "C" {
 typedef enum {
   PE_PAPER_A4 = 0,        /* single sheet DIN A4, 210 x 297 mm        */
   PE_PAPER_A4_ENDLOS = 1, /* fanfold 12" x 240 mm (A4 hoch), 15 mm Lochrand   */
-  PE_PAPER_LETTER = 2
+  PE_PAPER_LETTER = 2,
+  PE_PAPER_A4_ENDLOS_GRUEN = 3 /* fanfold as 1, with green/white reading bars */
 } pe_paper;
 
 typedef struct {
   int32_t page_width, page_height; /* paper size                        */
   int32_t left_offset, top_offset; /* unprintable border                */
   int continuous;                  /* fanfold paper                     */
+  int greenbar;                    /* green/white reading bars (Lesestreifen) */
   int compress;                    /* Flate compress page streams       */
 } pe_config;
 

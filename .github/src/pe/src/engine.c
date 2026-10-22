@@ -18,6 +18,9 @@ void pe_config_init(pe_config *c, pe_paper paper) {
       c->page_width = PE_UNITS_PER_INCH * 17 / 2;
       c->page_height = PE_UNITS_PER_INCH * 11;
       break;
+    case PE_PAPER_A4_ENDLOS_GRUEN:
+      c->greenbar = 1;
+      /* fall through */
     case PE_PAPER_A4_ENDLOS:
       /* DIN-Computerpapier "12 Zoll x 240 mm (A4 hoch)": 240 mm wide with a
        * 15 mm tractor strip (Fuehrungslochrand) on each side, 12 inch pitch
@@ -135,15 +138,51 @@ static void circle(pe_engine *t, int32_t cx, int32_t cy, int32_t r) {
   puts_(t, line);
 }
 
-static void tractor_strips(pe_engine *t, int32_t w100, int32_t h100) {
+static void hline(pe_engine *t, int32_t x0, int32_t x1, int32_t y) {
+  char a[32], b[32], c[32], line[256];
+  pdf_fmt100(a, x0);
+  pdf_fmt100(b, y);
+  pdf_fmt100(c, x1);
+  snprintf(line, sizeof line, "%s %s m %s %s l S\n", a, b, c, b);
+  puts_(t, line);
+}
+
+/*
+ * Fanfold paper as it comes out of the printer: tractor strips with 4 mm
+ * transport holes every 1/2 inch, the perforation to tear them off, the
+ * cross perforation between the sheets and, for "Lesestreifen" paper, a
+ * green bar on every second line (6 lines per inch).
+ */
+static void tractor_strips(pe_engine *t, int32_t w100, int32_t h100,
+                           int32_t top100, int green) {
   const int32_t strip = 4252, hole_x = 2126, hole_r = 567, pitch = 3600;
-  char a[32], b[32], line[200];
-  puts_(t, "q 0.55 G 0.4 w\n");
+  const int32_t row = 1200; /* one line at 6 lpi = 1/6 inch = 12 pt */
+  char a[32], b[32], c[32], d[32], line[200];
+
+  if (green) {
+    puts_(t, "q 0.86 0.94 0.86 rg\n");
+    for (int32_t y = top100 + row; y + row <= h100; y += 2 * row) {
+      pdf_fmt100(a, strip);
+      pdf_fmt100(b, h100 - y - row);
+      pdf_fmt100(c, w100 - 2 * strip);
+      pdf_fmt100(d, row);
+      snprintf(line, sizeof line, "%s %s %s %s re f\n", a, b, c, d);
+      puts_(t, line);
+    }
+    puts_(t, "0.16 0.52 0.30 RG 0.5 w\n");
+    for (int32_t y = top100 + row; y + row <= h100; y += 2 * row) {
+      hline(t, strip, w100 - strip, h100 - y);
+      hline(t, strip, w100 - strip, h100 - y - row);
+    }
+    puts_(t, "Q\n");
+  }
+
+  puts_(t, "q 0 G 0.8 w\n");
   for (int32_t y = pitch / 2; y < h100; y += pitch) {
     circle(t, hole_x, y, hole_r);
     circle(t, w100 - hole_x, y, hole_r);
   }
-  puts_(t, "[2.5 2] 0 d 0.3 w\n");
+  puts_(t, "[3 2] 0 d 0.4 w\n");
   pdf_fmt100(a, strip);
   pdf_fmt100(b, h100);
   snprintf(line, sizeof line, "%s 0 m %s %s l S\n", a, a, b);
@@ -164,7 +203,8 @@ static void flush_page(pe_engine *e) {
   if (e->cfg.continuous) {
     pe_engine t;
     memset(&t, 0, sizeof t);
-    tractor_strips(&t, pt100(e->cfg.page_width), page_h100(e));
+    tractor_strips(&t, pt100(e->cfg.page_width), page_h100(e),
+                   pt100(e->cfg.top_offset), e->cfg.greenbar);
     put(&t, (const char *)e->buf, e->len);
     free(e->buf);
     e->buf = t.buf;

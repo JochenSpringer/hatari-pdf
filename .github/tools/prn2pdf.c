@@ -15,6 +15,7 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[i], "-o") && i + 1 < argc) out = argv[++i];
     else if (!strcmp(argv[i], "-d") && i + 1 < argc) dir = argv[++i];
     else if (!strcmp(argv[i], "-e")) paper = PE_PAPER_A4_ENDLOS;
+    else if (!strcmp(argv[i], "-g")) paper = PE_PAPER_A4_ENDLOS_GRUEN;
     else if (!strcmp(argv[i], "-l")) paper = PE_PAPER_LETTER;
     else if (!strcmp(argv[i], "-L")) {
       for (const pe_driver *const *d = pe_drivers(); *d; d++)
