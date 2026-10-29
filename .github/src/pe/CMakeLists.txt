@@ -1,12 +1,7 @@
 # Printer emulation core: renders printer data streams to PDF
-# (NEC Pinwriter P6 and further printer models, see drivers/)
-set(PE_SOURCES
-	src/engine.c src/pdf.c src/font.c src/registry.c src/util.c
-	src/drivers/escp.c src/drivers/p6.c
-	src/fonts/font_draft9.c src/fonts/font_lq24.c
-	src/fonts/font_prestige.c src/fonts/font_sans.c src/fonts/font_sans_ps.c
-	src/fonts/font_script.c src/fonts/font_script_ps.c
-	src/fonts/font_ocra.c src/fonts/font_ocrb.c)
+# (NEC P6, Epson LQ / LQ-800 / FX-80, Panasonic KX-P2023, Star LC24-10,
+#  Schneider/Amstrad NLQ401 - see drivers/)
+file(GLOB PE_SOURCES src/*.c src/drivers/*.c src/fonts/*.c)
 
 add_library(Pe ${PE_SOURCES})
 target_include_directories(Pe PUBLIC include PRIVATE src src/drivers)

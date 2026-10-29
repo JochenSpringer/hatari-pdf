@@ -26,6 +26,7 @@ typedef struct {
   const uint32_t *cols;   /* count * width columns                     */
   const uint8_t *advance; /* proportional advance in columns, bearings
                              included, `count` entries                 */
+  uint16_t vres;          /* vertical wire pitch in dpi, 0 = printer default */
 } pe_font;
 
 /*

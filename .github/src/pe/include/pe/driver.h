@@ -40,6 +40,11 @@ typedef struct pe_driver {
 /* Built in drivers. */
 extern const pe_driver pe_driver_fx80;
 extern const pe_driver pe_driver_p6;
+extern const pe_driver pe_driver_eplq;
+extern const pe_driver pe_driver_lq800;
+extern const pe_driver pe_driver_kxp;
+extern const pe_driver pe_driver_lc24;
+extern const pe_driver pe_driver_nlq401;
 
 /* Registry: NULL terminated list of every driver linked into the build. */
 const pe_driver *const *pe_drivers(void);

@@ -44,6 +44,7 @@ static const escp_caps p6_caps = {
     .gfx8_pitch = PE_UNITS_PER_INCH / 60,
     .has_24bit_gfx = 1,
     .esc_A_unit = PE_UNITS_PER_INCH / 60,
+    .nec_fs = 1,
 };
 
 static void p6_init(void *st, pe_engine *e) {

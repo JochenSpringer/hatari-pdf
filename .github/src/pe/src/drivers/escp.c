@@ -155,13 +155,42 @@ static uint16_t translate(const escp *s, uint8_t c) {
 static const int32_t pitch_normal[3] = {216, 180, 144};
 static const int32_t pitch_cond[3] = {126, 108, 144}; /* 17.14, 20, 15 cpi */
 
-static const pe_font *font_for(const escp *s) {
-  if (!s->lq || !s->caps->lq) return s->caps->draft;
+/* Vertical wire pitch of a font: its own raster or the head's. */
+static int32_t font_pin(const escp *s, const pe_font *f) {
+  return f->vres ? PE_UNITS_PER_INCH / f->vres : s->caps->pin_pitch;
+}
+
+/* Choose the artwork; *ital / *bold tell whether the font itself already
+ * is the italic / emphasized design so the glyphs need no slant / smear. */
+static const pe_font *font_sel(const escp *s, int *ital, int *bold) {
+  const pe_font *f;
+  *ital = *bold = 0;
+  if (!s->lq || !s->caps->lq) {
+    f = s->caps->draft;
+    if (s->italic && s->caps->draft_italic) {
+      f = s->caps->draft_italic;
+      *ital = 1;
+    } else if (s->emphasized && s->caps->draft_bold) {
+      f = s->caps->draft_bold;
+      *bold = 1;
+    }
+    return f;
+  }
+  f = s->caps->lq;
   if (s->typeface < s->caps->ntypefaces) {
     const escp_typeface *t = &s->caps->typefaces[s->typeface];
-    return s->proportional && t->prop ? t->prop : t->fixed;
+    f = (s->proportional && t->prop) ? t->prop : t->fixed;
+    if (s->italic && t->italic) {
+      f = t->italic;
+      *ital = 1;
+    }
   }
-  return s->caps->lq;
+  return f;
+}
+
+static const pe_font *font_for(const escp *s) {
+  int i, b;
+  return font_sel(s, &i, &b);
 }
 
 static int32_t char_width(const escp *s) {
@@ -173,7 +202,7 @@ static int32_t char_width(const escp *s) {
 
 static int32_t cell_height(const escp *s) {
   const pe_font *f = font_for(s);
-  int32_t h = (int32_t)f->pins * s->caps->pin_pitch;
+  int32_t h = (int32_t)f->pins * font_pin(s, f);
   return s->dheight ? h * 2 : h;
 }
 
@@ -205,13 +234,14 @@ static void carriage_return(escp *s, pe_engine *e) {
 /* ------------------------------------------------------------------ */
 
 static void draw_glyph(escp *s, pe_engine *e, uint16_t code, int32_t cw) {
-  const pe_font *f = font_for(s);
+  int nat_ital, nat_bold;
+  const pe_font *f = font_sel(s, &nat_ital, &nat_bold);
   uint8_t adv = f->width;
   const uint32_t *g = pe_font_glyph(f, code, &adv);
   if (!g) return;
 
   const int32_t dot = s->caps->dot;
-  const int32_t pin = s->caps->pin_pitch;
+  const int32_t pin = font_pin(s, f);
   const int32_t x0 = e->x;
   const int32_t y0 = e->y;
   const int32_t colpitch = cw / f->cell ? cw / f->cell : 1;
@@ -220,7 +250,7 @@ static void draw_glyph(escp *s, pe_engine *e, uint16_t code, int32_t cw) {
    * the 24 wire heads, whose columns are much finer than their dots. */
   const int32_t smear = dot / 2;
   /* Italics lean the cell by about 1 dot column per 3 wires. */
-  const int32_t shear = s->italic ? pin / 3 : 0;
+  const int32_t shear = (s->italic && !nat_ital) ? pin / 3 : 0;
   const int32_t sub_off = s->script == 2 ? (int32_t)f->pins * pin / 3 : 0;
 
   for (int c = 0; c < f->width; c++) {
@@ -241,16 +271,82 @@ static void draw_glyph(escp *s, pe_engine *e, uint16_t code, int32_t cw) {
       }
       int32_t x = cx + shear * (f->baseline - r);
       pe_engine_dot(e, x, y, dot);
-      if (s->emphasized) pe_engine_dot(e, x + smear, y, dot);
+      if (s->emphasized && !nat_bold) pe_engine_dot(e, x + smear, y, dot);
       if (s->dstrike) {
         pe_engine_dot(e, x, y + smear, dot);
-        if (s->emphasized) pe_engine_dot(e, x + smear, y + smear, dot);
+        if (s->emphasized && !nat_bold) pe_engine_dot(e, x + smear, y + smear, dot);
       }
     }
   }
   if (s->underline) {
     int32_t uy = y0 + ((int32_t)f->baseline + 2) * pin;
     pe_engine_hrule(e, x0, x0 + cw - colpitch, uy, dot);
+  }
+}
+
+
+/* ---- accents the fonts do not have ---------------------------------------
+ * The printer ROM dumps only hold ASCII.  Letters with accents are built from
+ * the base letter and a few wire dots above it. */
+enum { ACC_NONE, ACC_DIAER, ACC_ACUTE, ACC_GRAVE, ACC_CIRC, ACC_TILDE, ACC_RING };
+
+static int decomp(uint16_t code, uint16_t *base) {
+  static const struct { uint16_t code, base; uint8_t kind; } t[] = {
+      {0xC4,'A',ACC_DIAER}, {0xD6,'O',ACC_DIAER}, {0xDC,'U',ACC_DIAER}, {0xCB,'E',ACC_DIAER}, {0xCF,'I',ACC_DIAER},
+      {0xE4,'a',ACC_DIAER}, {0xF6,'o',ACC_DIAER}, {0xFC,'u',ACC_DIAER}, {0xEB,'e',ACC_DIAER}, {0xEF,'i',ACC_DIAER}, {0xFF,'y',ACC_DIAER},
+      {0xC1,'A',ACC_ACUTE}, {0xC9,'E',ACC_ACUTE}, {0xCD,'I',ACC_ACUTE}, {0xD3,'O',ACC_ACUTE}, {0xDA,'U',ACC_ACUTE},
+      {0xE1,'a',ACC_ACUTE}, {0xE9,'e',ACC_ACUTE}, {0xED,'i',ACC_ACUTE}, {0xF3,'o',ACC_ACUTE}, {0xFA,'u',ACC_ACUTE}, {0xFD,'y',ACC_ACUTE},
+      {0xC0,'A',ACC_GRAVE}, {0xC8,'E',ACC_GRAVE}, {0xCC,'I',ACC_GRAVE}, {0xD2,'O',ACC_GRAVE}, {0xD9,'U',ACC_GRAVE},
+      {0xE0,'a',ACC_GRAVE}, {0xE8,'e',ACC_GRAVE}, {0xEC,'i',ACC_GRAVE}, {0xF2,'o',ACC_GRAVE}, {0xF9,'u',ACC_GRAVE},
+      {0xC2,'A',ACC_CIRC}, {0xCA,'E',ACC_CIRC}, {0xCE,'I',ACC_CIRC}, {0xD4,'O',ACC_CIRC}, {0xDB,'U',ACC_CIRC},
+      {0xE2,'a',ACC_CIRC}, {0xEA,'e',ACC_CIRC}, {0xEE,'i',ACC_CIRC}, {0xF4,'o',ACC_CIRC}, {0xFB,'u',ACC_CIRC},
+      {0xC3,'A',ACC_TILDE}, {0xD1,'N',ACC_TILDE}, {0xD5,'O',ACC_TILDE}, {0xE3,'a',ACC_TILDE}, {0xF1,'n',ACC_TILDE}, {0xF5,'o',ACC_TILDE},
+      {0xC5,'A',ACC_RING}, {0xE5,'a',ACC_RING},
+      {0xC7,'C',ACC_NONE}, {0xE7,'c',ACC_NONE}, {0xDF,'B',ACC_NONE}, /* sharp s drawn as B */
+  };
+  for (size_t i = 0; i < sizeof t / sizeof t[0]; i++) {
+    if (t[i].code == code) { *base = t[i].base; return t[i].kind; }
+  }
+  return -1;
+}
+
+static void synth_accent(escp *s, pe_engine *e, const pe_font *f, uint16_t base,
+                         int kind, int32_t cw) {
+  uint8_t adv;
+  const uint32_t *g = pe_font_glyph(f, base, &adv);
+  if (!g || kind == ACC_NONE) return;
+  int minc = f->width, maxc = -1, toprow = 32;
+  for (int c = 0; c < f->width; c++) {
+    if (!g[c]) continue;
+    if (c < minc) minc = c;
+    if (c > maxc) maxc = c;
+    for (int r = 0; r < 32; r++) {
+      if (g[c] & (1u << r)) { if (r < toprow) toprow = r; break; }
+    }
+  }
+  if (maxc < 0) return;
+  const int32_t pin = font_pin(s, f), dot = s->caps->dot;
+  const int32_t colp = cw / f->cell ? cw / f->cell : 1;
+  const int32_t cx = e->x + (int32_t)(((int64_t)(minc + maxc + 1) * cw) / (2 * f->cell));
+  int32_t hs = (int32_t)(maxc - minc + 1) * colp / 4;
+  if (hs < dot) hs = dot;
+  const int32_t y = e->y + (toprow * pin) * (s->dheight ? 2 : 1) - dot * 2;
+  const int32_t d = dot * 2 / 3 + 1;
+  switch (kind) {
+    case ACC_DIAER:
+      pe_engine_dot(e, cx - hs, y, dot); pe_engine_dot(e, cx + hs, y, dot); break;
+    case ACC_ACUTE:
+      pe_engine_dot(e, cx - hs / 2, y + d, dot); pe_engine_dot(e, cx + hs / 2, y - d, dot); break;
+    case ACC_GRAVE:
+      pe_engine_dot(e, cx - hs / 2, y - d, dot); pe_engine_dot(e, cx + hs / 2, y + d, dot); break;
+    case ACC_CIRC:
+      pe_engine_dot(e, cx - hs, y + d, dot); pe_engine_dot(e, cx, y - d, dot); pe_engine_dot(e, cx + hs, y + d, dot); break;
+    case ACC_TILDE:
+      pe_engine_dot(e, cx - hs, y, dot); pe_engine_dot(e, cx, y - d, dot); pe_engine_dot(e, cx + hs, y, dot); break;
+    case ACC_RING:
+      pe_engine_dot(e, cx - hs / 2, y, dot); pe_engine_dot(e, cx + hs / 2, y, dot);
+      pe_engine_dot(e, cx, y - d, dot); pe_engine_dot(e, cx, y + d, dot); break;
+    default: break;
   }
 }
 
@@ -261,6 +357,7 @@ static void put_char(escp *s, pe_engine *e, uint8_t c) {
   uint16_t base = 0, accent = 0;
   int raise = 0;
   int shift = 0; /* wire rows the accent moves up */
+  int synth = ACC_NONE;
 
   if (compose(code, &base, &accent, &raise)) {
     int use = !pe_font_has(f, code);
@@ -272,7 +369,11 @@ static void put_char(escp *s, pe_engine *e, uint8_t c) {
     }
     if (use) {
       code = base;
-      if (raise) {
+      if (accent && !pe_font_has(f, accent)) { /* font lacks the mark: draw dots */
+        synth = accent == 0xA8 ? ACC_DIAER : accent == '^' ? ACC_CIRC : accent == '~' ? ACC_TILDE : ACC_NONE;
+        accent = 0;
+      }
+      if (raise && accent) {
         int ct, cb, at, ab;
         glyph_rows(f, base, &ct, &cb);
         glyph_rows(f, accent, &at, &ab);
@@ -283,6 +384,12 @@ static void put_char(escp *s, pe_engine *e, uint8_t c) {
     } else {
       accent = 0;
     }
+  }
+
+  if (!accent && synth == ACC_NONE && !pe_font_has(f, code)) {
+    uint16_t b2;
+    int k = decomp(code, &b2);
+    if (k >= 0) { code = b2; synth = k; }
   }
 
   if (s->proportional) {
@@ -297,10 +404,11 @@ static void put_char(escp *s, pe_engine *e, uint8_t c) {
     if (!s->autofeed) line_feed(s, e);
   }
   draw_glyph(s, e, code, cw);
+  if (synth != ACC_NONE) synth_accent(s, e, f, code, synth, cw);
   if (accent) {
     const int32_t oy = e->y;
     const uint8_t ul = s->underline;
-    e->y -= shift * s->caps->pin_pitch * (s->dheight ? 2 : 1);
+    e->y -= shift * font_pin(s, f) * (s->dheight ? 2 : 1);
     s->underline = 0;
     draw_glyph(s, e, accent, cw);
     s->underline = ul;
@@ -765,7 +873,7 @@ void escp_byte(escp *s, pe_engine *e, uint8_t b) {
     case 0x14: s->expanded_line = 0; return; /* DC4  */
     case 0x18: return;                       /* CAN  */
     case 0x1B: s->st = ST_ESC; return;       /* ESC  */
-    case 0x1C: s->st = ST_FS; return;        /* FS   */
+    case 0x1C: if (s->caps->nec_fs) s->st = ST_FS; return; /* FS */
     case 0x7F: return;                       /* DEL  */
     default: break;
   }

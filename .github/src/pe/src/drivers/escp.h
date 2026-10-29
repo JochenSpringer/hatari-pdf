@@ -21,6 +21,7 @@ typedef struct {
   uint8_t id;              /* ESC k parameter                          */
   const pe_font *fixed;
   const pe_font *prop;     /* proportional artwork, NULL = use fixed   */
+  const pe_font *italic;   /* real italic artwork, NULL = slant the glyphs */
 } escp_typeface;
 
 typedef struct {
@@ -35,6 +36,9 @@ typedef struct {
   int32_t gfx8_pitch;      /* vertical pitch of the 8 wire image modes */
   int has_24bit_gfx;       /* ESC * modes 32..73                       */
   int32_t esc_A_unit;      /* ESC A n feeds n * this                   */
+  const pe_font *draft_italic; /* draft italic artwork, NULL = slant      */
+  const pe_font *draft_bold;   /* emphasized draft artwork, NULL = smear  */
+  int nec_fs;              /* NEC FS (0x1C) commands, see FS E          */
 } escp_caps;
 
 #define ESCP_MAX_HTAB 32
