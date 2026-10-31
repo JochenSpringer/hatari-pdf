@@ -8,12 +8,12 @@
 #include "pe/rom_fonts.h"
 
 static const escp_typeface lc24_typefaces[] = {
-    {0, &pe_font_lc24_courier, NULL, &pe_font_lc24_courier_italic},
-    {1, &pe_font_lc24_orator, NULL, NULL},
-    {2, &pe_font_lc24_courier, NULL, &pe_font_lc24_courier_italic},
-    {3, &pe_font_lc24_prestige, NULL, &pe_font_lc24_prestige_italic},
-    {4, &pe_font_lc24_script, NULL, NULL},
-    {7, &pe_font_lc24_orator, NULL, NULL},
+    {0, &pe_font_prestige, &pe_font_prestige_ps, NULL},  /* Courier  */
+    {1, &pe_font_ocrb, NULL, NULL},                      /* Orator   */
+    {2, &pe_font_prestige, &pe_font_prestige_ps, NULL},  /* Courier  */
+    {3, &pe_font_prestige, &pe_font_prestige_ps, NULL},  /* Prestige */
+    {4, &pe_font_script, &pe_font_script_ps, NULL},      /* Script   */
+    {7, &pe_font_ocrb, NULL, NULL},                      /* Orator   */
 };
 static const pe_typeface lc24_names[] = {
     {0, 0, "Courier"}, {3, 0, "Prestige"}, {4, 0, "Script"}, {7, 0, "Orator"}, {0, 0, NULL},
@@ -22,16 +22,15 @@ static const escp_caps lc24_caps = {
     .pins = 24,
     .pin_pitch = PE_UNITS_PER_INCH / 180,
     .dot = 18,
-    .draft = &pe_font_lc24_draft,
-    .lq = &pe_font_lc24_courier,
+    .draft = &pe_font_lq24,
+    .lq = &pe_font_prestige,
     .lq_default = 1,
+    .nec_fs = 1, /* the 1st Word Plus LC24-10 driver sends NEC FS E n */
     .typefaces = lc24_typefaces,
     .ntypefaces = 6,
     .gfx8_pitch = PE_UNITS_PER_INCH / 60,
     .has_24bit_gfx = 1,
     .esc_A_unit = PE_UNITS_PER_INCH / 60,
-    .draft_italic = &pe_font_lc24_draft_italic,
-    .draft_bold = &pe_font_lc24_draft_bold,
 };
 static void lc24_init(void *st, pe_engine *e) { escp_init((escp *)st, &lc24_caps, e); }
 static void lc24_reset(void *st, pe_engine *e) { escp_reset((escp *)st, e); }

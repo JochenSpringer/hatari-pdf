@@ -116,16 +116,24 @@ static SGOBJ devicedlg[] =
 #define PDFDLG_PAPERPREV   9
 #define PDFDLG_PAPERNEXT   10
 #define PDFDLG_PAPERNAME   12
-#define PDFDLG_BROWSE      14
-#define PDFDLG_FILENAME    15
-#define PDFDLG_EXIT        17
+#define PDFDLG_IDLEPREV    14
+#define PDFDLG_IDLENEXT    15
+#define PDFDLG_IDLENAME    17
+#define PDFDLG_BROWSE      19
+#define PDFDLG_FILENAME    20
+#define PDFDLG_EXIT        22
+
+/* seconds without data after which a print job (= one PDF file) ends */
+static const int PdfIdleChoices[] = { 5, 15, 30, 60, 120, 300 };
+#define NUM_PDF_IDLE ((int)(sizeof(PdfIdleChoices) / sizeof(PdfIdleChoices[0])))
+static char dlgPdfIdle[20];
 
 static SGOBJ pdfdlg[] =
 {
-	{ SGBOX, 0, 0, 0,0, 52,15, NULL },
+	{ SGBOX, 0, 0, 0,0, 52,17, NULL },
 	{ SGTEXT, 0, 0, 17,1, 18,1, "PDF printer setup" },
 
-	{ SGBOX, 0, 0, 1,3, 50,9, NULL },
+	{ SGBOX, 0, 0, 1,3, 50,11, NULL },
 	{ SGTEXT, 0, 0, 2,4, 14,1, "Printer model:" },
 	{ SGBUTTON, 0, 0, 17,4, 3,1, "\x04", SG_SHORTCUT_LEFT },
 	{ SGBUTTON, 0, 0, 20,4, 3,1, "\x03", SG_SHORTCUT_RIGHT },
@@ -136,12 +144,17 @@ static SGOBJ pdfdlg[] =
 	{ SGBUTTON, 0, 0, 20,6, 3,1, "\x03" },
 	{ SGBOX, 0, 0, 23,6, 27,1, NULL },
 	{ SGTEXT, 0, 0, 24,6, 25,1, dlgPdfPaper },
-	{ SGTEXT, 0, 0, 2,8, 32,1, "PDF file (time stamp is added):" },
-	{ SGBUTTON, 0, 0, 42,8, 8,1, "_Browse" },
-	{ SGTEXT, 0, 0, 3,9, 46,1, dlgPdfName },
-	{ SGTEXT, 0, 0, 3,10, 46,1, "-> name_YYYYMMDD_HHMMSS.pdf per print job" },
+	{ SGTEXT, 0, 0, 2,8, 14,1, "Job ends after:" },
+	{ SGBUTTON, 0, 0, 17,8, 3,1, "\x04" },
+	{ SGBUTTON, 0, 0, 20,8, 3,1, "\x03" },
+	{ SGBOX, 0, 0, 23,8, 27,1, NULL },
+	{ SGTEXT, 0, 0, 24,8, 25,1, dlgPdfIdle },
+	{ SGTEXT, 0, 0, 2,10, 32,1, "PDF file (time stamp is added):" },
+	{ SGBUTTON, 0, 0, 42,10, 8,1, "_Browse" },
+	{ SGTEXT, 0, 0, 3,11, 46,1, dlgPdfName },
+	{ SGTEXT, 0, 0, 3,12, 46,1, "-> name_YYYYMMDD_HHMMSS.pdf per print job" },
 
-	{ SGBUTTON, SG_DEFAULT, 0, 16,13, 20,1, "Back to device menu" },
+	{ SGBUTTON, SG_DEFAULT, 0, 16,15, 20,1, "Back to device menu" },
 	{ SGSTOP, 0, 0, 0,0, 0,0, NULL }
 };
 
@@ -150,6 +163,15 @@ static SGOBJ pdfdlg[] =
 /**
  * Show and process the "PDF printer setup" dialog.
  */
+static void PdfIdleText(int idx)
+{
+	int s = PdfIdleChoices[idx];
+	if (s >= 60)
+		snprintf(dlgPdfIdle, sizeof(dlgPdfIdle), "%d min no data", s / 60);
+	else
+		snprintf(dlgPdfIdle, sizeof(dlgPdfIdle), "%d s no data", s);
+}
+
 static void DlgDevice_PdfSetup(void)
 {
 	int but;
@@ -157,9 +179,14 @@ static void DlgDevice_PdfSetup(void)
 	int nPapers = PrinterPdf_NumPapers();
 	int model = PrinterPdf_FindModel(ConfigureParams.Printer.szPrinterModel);
 	int paper = ConfigureParams.Printer.nPaperType;
+	int idle = 2, i;
 
 	if (paper < 0 || paper >= nPapers)
 		paper = 0;
+	for (i = 0; i < NUM_PDF_IDLE; i++)
+		if (PdfIdleChoices[i] == ConfigureParams.Printer.nPdfIdleSeconds)
+			idle = i;
+	PdfIdleText(idle);
 
 	SDLGui_CenterDlg(pdfdlg);
 
@@ -188,6 +215,14 @@ static void DlgDevice_PdfSetup(void)
 		 case PDFDLG_PAPERNEXT:
 			paper = (paper + 1) % nPapers;
 			File_ShrinkName(dlgPdfPaper, PrinterPdf_PaperName(paper), pdfdlg[PDFDLG_PAPERNAME].w);
+			break;
+		 case PDFDLG_IDLEPREV:
+			idle = (idle + NUM_PDF_IDLE - 1) % NUM_PDF_IDLE;
+			PdfIdleText(idle);
+			break;
+		 case PDFDLG_IDLENEXT:
+			idle = (idle + 1) % NUM_PDF_IDLE;
+			PdfIdleText(idle);
 			break;
 		 case PDFDLG_BROWSE:
 			/* SDLGui_FileConfSelect() would clear the setting when only a
@@ -225,6 +260,7 @@ static void DlgDevice_PdfSetup(void)
 	Str_Copy(ConfigureParams.Printer.szPrinterModel, PrinterPdf_ModelId(model),
 	         sizeof(ConfigureParams.Printer.szPrinterModel));
 	ConfigureParams.Printer.nPaperType = paper;
+	ConfigureParams.Printer.nPdfIdleSeconds = PdfIdleChoices[idle];
 }
 
 

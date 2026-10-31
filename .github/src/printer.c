@@ -33,6 +33,9 @@ const char Printer_fileid[] = "Hatari printer.c";
 /* After ~4 seconds (4*50 VBLs), flush & close printer */
 #define PRINTER_IDLE_CLOSE   (4*50)
 
+/* A PDF print job (several pages in one file) ends after the configured
+ * number of seconds without data, see PrinterPdf in the device dialog. */
+static int nPdfIdleCount;
 static int nIdleCount;
 static int bUnflushed;
 
@@ -96,6 +99,7 @@ void Printer_UnInit(void)
 	PrinterPdf_Close();
 	bUnflushed = false;
 	nIdleCount = 0;
+	nPdfIdleCount = 0;
 }
 
 
@@ -174,15 +178,24 @@ void Printer_CheckIdleStatus(void)
 			fflush(pPrinterHandle);
 		bUnflushed = false;
 		nIdleCount = 0;
+		nPdfIdleCount = 0;
 	}
 	else
 	{
 		nIdleCount++;
-		/* Has printer been idle? */
-		if (nIdleCount >= PRINTER_IDLE_CLOSE)
+		/* raw .prn file: close after a few seconds */
+		if (nIdleCount >= PRINTER_IDLE_CLOSE && pPrinterHandle)
+			pPrinterHandle = File_Close(pPrinterHandle);
+		/* PDF: the job stays open much longer so that the pages of a
+		 * document printed one sheet after the other end up in one file */
+		if (PrinterPdf_IsOpen())
 		{
-			/* Close printer output */
-			Printer_UnInit();
+			int limit = ConfigureParams.Printer.nPdfIdleSeconds;
+			if (limit < 2) limit = 2;
+			if (++nPdfIdleCount >= limit * 50)
+				Printer_UnInit();
 		}
+		else
+			nPdfIdleCount = 0;
 	}
 }

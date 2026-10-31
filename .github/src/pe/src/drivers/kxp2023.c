@@ -8,11 +8,11 @@
 #include "pe/rom_fonts.h"
 
 static const escp_typeface kxp_typefaces[] = {
-    {0, &pe_font_kxp_courier, NULL, NULL},
-    {1, &pe_font_kxp_boldps, NULL, NULL},
-    {2, &pe_font_kxp_courier, NULL, NULL},
-    {3, &pe_font_kxp_prestige, NULL, NULL},
-    {4, &pe_font_kxp_script, NULL, NULL},
+    {0, &pe_font_prestige, &pe_font_prestige_ps, NULL},
+    {1, &pe_font_sans, &pe_font_sans_ps, NULL},
+    {2, &pe_font_prestige, &pe_font_prestige_ps, NULL},
+    {3, &pe_font_prestige, &pe_font_prestige_ps, NULL},
+    {4, &pe_font_script, &pe_font_script_ps, NULL},
 };
 static const pe_typeface kxp_names[] = {
     {0, 0, "Courier"}, {1, 0, "Bold PS"}, {3, 0, "Prestige"}, {4, 0, "Script"}, {0, 0, NULL},
@@ -21,8 +21,8 @@ static const escp_caps kxp_caps = {
     .pins = 24,
     .pin_pitch = PE_UNITS_PER_INCH / 180,
     .dot = 18,
-    .draft = &pe_font_kxp_draft,
-    .lq = &pe_font_kxp_courier,
+    .draft = &pe_font_lq24,
+    .lq = &pe_font_prestige,
     .lq_default = 1,
     .typefaces = kxp_typefaces,
     .ntypefaces = 5,

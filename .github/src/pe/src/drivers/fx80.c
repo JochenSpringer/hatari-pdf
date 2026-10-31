@@ -1,7 +1,7 @@
 /*
  * Epson FX-80 - 9 wire ESC/P, draft only
  *
- * Font from the reconstructed character generator dump (fonts/rom).
+ * Artwork: the 9 wire draft font (the reconstructed dump is defective).
  */
 #include "escp.h"
 #include "pe/rom_fonts.h"
@@ -11,7 +11,7 @@ static const escp_caps fx80_caps = {
     .pins = 9,
     .pin_pitch = PE_UNITS_PER_INCH / 72,
     .dot = 30,
-    .draft = &pe_font_fx80_courier,
+    .draft = &pe_font_draft9,
     .lq = NULL,
     .gfx8_pitch = PE_UNITS_PER_INCH / 72,
     .has_24bit_gfx = 0,

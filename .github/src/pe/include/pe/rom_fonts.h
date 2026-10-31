@@ -20,6 +20,5 @@ extern const pe_font pe_font_lc24_prestige;
 extern const pe_font pe_font_lc24_prestige_italic;
 extern const pe_font pe_font_lc24_orator;
 extern const pe_font pe_font_lc24_script;
-extern const pe_font pe_font_nlq401_draft;
-extern const pe_font pe_font_nlq401_nlq;
+extern const pe_font pe_font_nlq401_draft, pe_font_nlq401_nlq; /* tools/pngfont.py */
 #endif

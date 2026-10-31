@@ -39,6 +39,7 @@ typedef struct {
   const pe_font *draft_italic; /* draft italic artwork, NULL = slant      */
   const pe_font *draft_bold;   /* emphasized draft artwork, NULL = smear  */
   int nec_fs;              /* NEC FS (0x1C) commands, see FS E          */
+  int default_intl;        /* national set after power up (ESC R n)     */
 } escp_caps;
 
 #define ESCP_MAX_HTAB 32

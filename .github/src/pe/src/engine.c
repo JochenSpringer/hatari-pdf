@@ -36,7 +36,10 @@ void pe_config_init(pe_config *c, pe_paper paper) {
   }
   /* single sheet: 1.3 mm the head cannot reach; fanfold: the tractor strips */
   c->left_offset = c->continuous ? 1276 /* 15 mm */ : PE_UNITS_PER_INCH / 20;
-  c->top_offset = PE_UNITS_PER_INCH / 6; /* 4.2 mm top of form */
+  /* fanfold: the page is the form between two perforations, the first line
+   * sits right at the top of form; single sheet: 4.2 mm top margin */
+  c->top_offset = c->continuous ? 0 : PE_UNITS_PER_INCH / 6;
+  c->base_page_height = c->page_height;
 }
 
 static void put(pe_engine *e, const char *s, size_t n) {

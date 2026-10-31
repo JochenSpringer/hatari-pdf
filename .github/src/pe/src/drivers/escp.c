@@ -222,6 +222,24 @@ static void feed(escp *s, pe_engine *e, int32_t units) {
   if (e->y + cell_height(s) > s->form_length - s->skip_bottom) form_feed(s, e);
 }
 
+/* Form length (ESC C).  On fanfold paper the PDF page is exactly one form:
+ * the sheet ends where the perforation is. */
+static void set_form_length(escp *s, pe_engine *e, int32_t len) {
+  if (e->cfg.continuous) {
+    if (len < PE_UNITS_PER_INCH) len = PE_UNITS_PER_INCH;
+    if (len > 22 * PE_UNITS_PER_INCH) len = 22 * PE_UNITS_PER_INCH;
+    if (len != e->cfg.page_height) {
+      pe_engine_form_feed(e, 0); /* finish the page printed so far */
+      e->cfg.page_height = len;
+    }
+    s->printable_height = len - 2 * e->cfg.top_offset;
+    s->form_length = s->printable_height;
+    return;
+  }
+  s->form_length = len;
+  if (s->form_length > s->printable_height) s->form_length = s->printable_height;
+}
+
 static void line_feed(escp *s, pe_engine *e) { feed(s, e, s->line_spacing); }
 
 static void carriage_return(escp *s, pe_engine *e) {
@@ -240,7 +258,7 @@ static void draw_glyph(escp *s, pe_engine *e, uint16_t code, int32_t cw) {
   const uint32_t *g = pe_font_glyph(f, code, &adv);
   if (!g) return;
 
-  const int32_t dot = s->caps->dot;
+  const int32_t dot = f->dot ? f->dot : s->caps->dot;
   const int32_t pin = font_pin(s, f);
   const int32_t x0 = e->x;
   const int32_t y0 = e->y;
@@ -551,6 +569,10 @@ void escp_reset(escp *s, pe_engine *e) {
   s->chartable = chartable;
   s->lq = (uint8_t)caps->lq_default;
   s->line_spacing = PE_UNITS_PER_INCH / 6;
+  if (e->cfg.continuous && e->cfg.page_height != e->cfg.base_page_height) {
+    pe_engine_form_feed(e, 0);
+    e->cfg.page_height = e->cfg.base_page_height; /* back to the 12 inch form */
+  }
   s->printable_width = e->cfg.page_width - 2 * e->cfg.left_offset;
   s->printable_height = e->cfg.page_height - 2 * e->cfg.top_offset;
   s->left_margin = 0;
@@ -570,6 +592,7 @@ void escp_reset(escp *s, pe_engine *e) {
 void escp_init(escp *s, const escp_caps *caps, pe_engine *e) {
   memset(s, 0, sizeof *s);
   s->caps = caps;
+  s->intl = (uint8_t)caps->default_intl;
   escp_reset(s, e);
 }
 
@@ -640,14 +663,10 @@ static void exec_cmd(escp *s, pe_engine *e) {
         s->st = ST_PARAM;
         return;
       }
-      s->form_length = (int32_t)p[0] * s->line_spacing;
-      if (s->form_length > s->printable_height)
-        s->form_length = s->printable_height;
+      set_form_length(s, e, (int32_t)p[0] * s->line_spacing);
       break;
     case 'c':
-      s->form_length = (int32_t)p[0] * PE_UNITS_PER_INCH;
-      if (s->form_length > s->printable_height)
-        s->form_length = s->printable_height;
+      set_form_length(s, e, (int32_t)p[0] * PE_UNITS_PER_INCH);
       break;
     case 'N': s->skip_bottom = (int32_t)p[0] * s->line_spacing; break;
     case 'O': s->skip_bottom = 0; break;

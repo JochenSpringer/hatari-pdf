@@ -45,6 +45,7 @@ extern const pe_driver pe_driver_lq800;
 extern const pe_driver pe_driver_kxp;
 extern const pe_driver pe_driver_lc24;
 extern const pe_driver pe_driver_nlq401;
+extern const pe_driver pe_driver_nlq401d;
 
 /* Registry: NULL terminated list of every driver linked into the build. */
 const pe_driver *const *pe_drivers(void);

@@ -10,6 +10,7 @@ static const pe_driver *const drivers[] = {
     &pe_driver_kxp,
     &pe_driver_lc24,
     &pe_driver_nlq401,
+    &pe_driver_nlq401d,
     NULL,
 };
 

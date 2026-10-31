@@ -24,7 +24,8 @@ typedef enum {
 } pe_paper;
 
 typedef struct {
-  int32_t page_width, page_height; /* paper size                        */
+  int32_t page_width, page_height; /* paper size (fanfold: current form length) */
+  int32_t base_page_height;        /* page_height after power up / ESC @ */
   int32_t left_offset, top_offset; /* unprintable border                */
   int continuous;                  /* fanfold paper                     */
   int greenbar;                    /* green/white reading bars (Lesestreifen) */

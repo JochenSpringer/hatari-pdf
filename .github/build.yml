@@ -1,0 +1,132 @@
+name: Windows-Build
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  win64:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: 1 - Eigene Dateien holen
+        uses: actions/checkout@v4
+      - name: 2 - Hatari 2.6.1 holen
+        uses: actions/checkout@v4
+        with:
+          repository: hatari/hatari
+          ref: v2.6.1
+          path: hatari-src
+      - name: 3 - Werkzeuge installieren
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          release: false
+          install: >-
+            make
+            mingw-w64-x86_64-cmake mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-SDL2 mingw-w64-x86_64-zlib
+            mingw-w64-x86_64-libpng
+      - name: 3b - Dateien an die richtige Stelle legen
+        run: |
+          echo "=== Struktur des Repositorys ==="
+          find . -maxdepth 4 -not -path './hatari-src/*' -not -path './.git/*' | sort | head -80
+          f=$(find . -name build-windows.sh -not -path './hatari-src/*' | head -1)
+          echo "build-windows.sh gefunden: $f"
+          dir=$(dirname "$f")
+          if [ -n "$f" ] && [ "$dir" != "." ]; then
+            echo "Dateien liegen in $dir - werden nach oben kopiert"
+            cp -r "$dir"/. .
+          fi
+      - name: 3c - Programmstand pruefen und reparieren
+        run: |
+          missing=0
+          heal() {  # heal <Dateiname> <Marker> <Zielpfad>
+            name="$1"; marker="$2"; target="$3"
+            if grep -q -- "$marker" "$target" 2>/dev/null; then echo "OK        $target"; return; fi
+            cand=$(grep -l -- "$marker" $(find . -name "$name" -not -path './hatari-src/*') 2>/dev/null | head -1 || true)
+            if [ -n "$cand" ]; then
+              echo "REPARIERT $target  <-  $cand"; mkdir -p "$(dirname "$target")"; cp "$cand" "$target"
+            else echo "FEHLT     $target  (keine Datei mit '$marker')"; missing=1; fi
+          }
+          need() {  # need <Zielpfad>: Datei muss existieren, sonst irgendwo im Repo suchen
+            target="$1"; name=$(basename "$target")
+            if [ -f "$target" ]; then return; fi
+            cand=$(find . -name "$name" -not -path './hatari-src/*' | head -1 || true)
+            if [ -n "$cand" ]; then echo "VERSCHOBEN $target <- $cand"; mkdir -p "$(dirname "$target")"; cp "$cand" "$target"
+            else echo "FEHLT     $target"; missing=1; fi
+          }
+          heal escp.c        set_form_length         src/pe/src/drivers/escp.c
+          heal escp.h        default_intl                  src/pe/src/drivers/escp.h
+          heal font.h        "uint8_t dot"           src/pe/include/pe/font.h
+          heal driver.h      pe_driver_nlq401d          src/pe/include/pe/driver.h
+          heal registry.c    pe_driver_nlq401d          src/pe/src/registry.c
+          heal engine.c      base_page_height        src/pe/src/engine.c
+          heal pe.h          base_page_height        src/pe/include/pe/pe.h
+          heal pdf.c         "pe printer engine 1.8" src/pe/src/pdf.c
+          heal printer_pdf.c "green bars"            src/printer_pdf.c
+          heal CMakeLists.txt PE_SOURCES             src/pe/CMakeLists.txt
+          heal printer.c       nPdfIdleCount          src/printer.c
+          heal configuration.c nPdfIdleSeconds        src/configuration.c
+          heal configuration.h nPdfIdleSeconds        src/includes/configuration.h
+          heal dlgDevice.c     PdfIdleChoices         src/gui-sdl/dlgDevice.c
+          for f in eplq lq800 fx80 kxp2023 lc24 nlq401; do need src/pe/src/drivers/$f.c; done
+          need src/pe/include/pe/rom_fonts.h
+          for f in fx80_courier kxp_boldps kxp_courier kxp_draft kxp_prestige kxp_script lc24_courier lc24_courier_italic lc24_draft lc24_draft_bold lc24_draft_italic lc24_orator lc24_prestige lc24_prestige_italic lc24_script lq800_draft lq800_roman lq800_sans nlq401_draft nlq401_nlq; do need src/pe/src/fonts/font_$f.c; done
+          if [ "$missing" = 1 ]; then
+            echo "FEHLER: Das Update update-beta1.zip fehlt (ganz oder teilweise) im Repository."
+            echo "Bitte die Ordner src, tools und fonts aus dem Update in die Hauptebene hochladen."
+            exit 1
+          fi
+      - name: 4 - Dateien kontrollieren
+        run: |
+          ls
+          ls hatari-src | head -30
+          ls src/pe/src
+          gcc --version
+          cmake --version
+      - name: 5 - PDF-Drucker in Hatari einbauen
+        run: cp -rv src/. hatari-src/src/
+      - name: 6 - Konfigurieren (cmake)
+        run: |
+          cd hatari-src
+          mkdir -p build
+          cd build
+          cmake -G "MSYS Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+      - name: 7 - Bauen (make)
+        run: |
+          cd hatari-src/build
+          make -j4 2>&1 | tee make.log
+          test -f src/hatari.exe
+      - name: 8 - prn2pdf.exe bauen
+        run: |
+          mkdir -p dist
+          gcc -std=gnu99 -O2 -s -DPE_HAVE_ZLIB \
+            -Isrc/pe/include -Isrc/pe/src -Isrc/pe/src/drivers \
+            src/pe/src/*.c src/pe/src/drivers/*.c src/pe/src/fonts/*.c \
+            tools/prn2pdf.c -lz -static -o dist/prn2pdf.exe
+      - name: 9 - Auslieferungsordner packen
+        run: |
+          mkdir -p dist
+          cp hatari-src/build/src/hatari.exe dist/
+          cp hatari-src/gpl.txt hatari-src/readme.txt dist/
+          cp -r hatari-src/doc dist/doc
+          ldd dist/hatari.exe | awk '/\/mingw64\// {print $3}' | sort -u | while read -r dll; do cp -v "$dll" dist/; done
+          ls -la dist
+      - name: 10 - Ergebnis bereitstellen
+        uses: actions/upload-artifact@v4
+        with:
+          name: hatari-win64
+          path: dist/
+      - name: Bei Fehler - Protokoll bereitstellen
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fehlerprotokoll
+          path: |
+            hatari-src/build/make.log
+            hatari-src/build/CMakeFiles/CMakeError.log
+            hatari-src/build/CMakeFiles/CMakeOutput.log
+          if-no-files-found: ignore
