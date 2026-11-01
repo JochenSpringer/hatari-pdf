@@ -122,7 +122,8 @@ static SGOBJ devicedlg[] =
 #define PDFDLG_BROWSE      19
 #define PDFDLG_FILENAME    20
 #define PDFDLG_SOUND       22
-#define PDFDLG_EXIT        23
+#define PDFDLG_ALERT       23
+#define PDFDLG_EXIT        24
 
 /* seconds without data after which a print job (= one PDF file) ends */
 static const int PdfIdleChoices[] = { 5, 15, 30, 60, 120, 300, 600 };
@@ -131,10 +132,10 @@ static char dlgPdfIdle[20];
 
 static SGOBJ pdfdlg[] =
 {
-	{ SGBOX, 0, 0, 0,0, 52,17, NULL },
+	{ SGBOX, 0, 0, 0,0, 52,18, NULL },
 	{ SGTEXT, 0, 0, 17,1, 18,1, "PDF printer setup" },
 
-	{ SGBOX, 0, 0, 1,3, 50,11, NULL },
+	{ SGBOX, 0, 0, 1,3, 50,12, NULL },
 	{ SGTEXT, 0, 0, 2,4, 14,1, "Printer model:" },
 	{ SGBUTTON, 0, 0, 17,4, 3,1, "\x04", SG_SHORTCUT_LEFT },
 	{ SGBUTTON, 0, 0, 20,4, 3,1, "\x03", SG_SHORTCUT_RIGHT },
@@ -154,9 +155,10 @@ static SGOBJ pdfdlg[] =
 	{ SGBUTTON, 0, 0, 42,10, 8,1, "_Browse" },
 	{ SGTEXT, 0, 0, 3,11, 46,1, dlgPdfName },
 	{ SGTEXT, 0, 0, 3,12, 46,1, "-> name_YYYYMMDD_HHMMSS.pdf per print job" },
-	{ SGCHECKBOX, 0, 0, 3,13, 40,1, "Printer noise and finish message" },
+	{ SGCHECKBOX, 0, 0, 3,13, 40,1, "Printer noise while printing" },
+	{ SGCHECKBOX, 0, 0, 3,14, 40,1, "Message when printout is finished" },
 
-	{ SGBUTTON, SG_DEFAULT, 0, 16,15, 20,1, "Back to device menu" },
+	{ SGBUTTON, SG_DEFAULT, 0, 16,16, 20,1, "Back to device menu" },
 	{ SGSTOP, 0, 0, 0,0, 0,0, NULL }
 };
 
@@ -193,6 +195,10 @@ static void DlgDevice_PdfSetup(void)
 		pdfdlg[PDFDLG_SOUND].state |= SG_SELECTED;
 	else
 		pdfdlg[PDFDLG_SOUND].state &= ~SG_SELECTED;
+	if (ConfigureParams.Printer.bPrinterAlert)
+		pdfdlg[PDFDLG_ALERT].state |= SG_SELECTED;
+	else
+		pdfdlg[PDFDLG_ALERT].state &= ~SG_SELECTED;
 
 	SDLGui_CenterDlg(pdfdlg);
 
@@ -268,6 +274,7 @@ static void DlgDevice_PdfSetup(void)
 	ConfigureParams.Printer.nPaperType = paper;
 	ConfigureParams.Printer.nPdfIdleSeconds = PdfIdleChoices[idle];
 	ConfigureParams.Printer.bPrinterSound = (pdfdlg[PDFDLG_SOUND].state & SG_SELECTED) != 0;
+	ConfigureParams.Printer.bPrinterAlert = (pdfdlg[PDFDLG_ALERT].state & SG_SELECTED) != 0;
 }
 
 

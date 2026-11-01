@@ -205,7 +205,7 @@ void Printer_CheckIdleStatus(void)
 				Printer_UnInit();
 				/* (UnInit already finished the job) */
 				pages = nLastPages;
-				if (pages > 0 && ConfigureParams.Printer.bPrinterSound)
+				if (pages > 0 && ConfigureParams.Printer.bPrinterAlert)
 					Log_AlertDlg(LOG_ERROR, "Printout finished: %d page(s)\n%s", pages, PrinterPdf_LastPath());
 			}
 		}

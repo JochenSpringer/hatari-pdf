@@ -82,7 +82,7 @@ static int open_file(struct pe_pdf *p) {
   /* 5: info */
   if (!begin_obj(p, 5)) return 0;
   fputs("<< /Title (Printer output) /Creator (Hatari PDF printer emulation) "
-        "/Producer (pe printer engine 2.0 2026-11-01, NEC Pinwriter P6, FS-E) >>\nendobj\n", p->fp);
+        "/Producer (pe printer engine 2.2 2026-11-01, NEC Pinwriter P6, FS-E) >>\nendobj\n", p->fp);
   p->tail = ftell(p->fp);
   return 1;
 }

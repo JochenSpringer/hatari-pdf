@@ -39,6 +39,7 @@ typedef struct {
   const pe_font *draft_italic; /* draft italic artwork, NULL = slant      */
   const pe_font *draft_bold;   /* emphasized draft artwork, NULL = smear  */
   int nec_fs;              /* NEC FS (0x1C) commands, see FS E          */
+  int lf_after_cr;         /* CR also feeds one line (Schneider NLQ401 DIP 7 ON) */
   int star_fs;             /* Star standard mode FS commands (E, C, I, V, 3, A, ...) */
   int default_intl;        /* national set after power up (ESC R n)     */
 } escp_caps;

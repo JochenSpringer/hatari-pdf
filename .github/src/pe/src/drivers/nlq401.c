@@ -24,6 +24,7 @@ static const escp_caps nlq401_caps = {
     .gfx8_pitch = PE_UNITS_PER_INCH / 72,
     .has_24bit_gfx = 0,
     .esc_A_unit = PE_UNITS_PER_INCH / 72,
+    .lf_after_cr = 0, /* DIP 7 ON: an LF after CR is honoured = plain CR and LF */
 };
 /* DIP switch 2-3: German DIN 66003 national characters instead of ASCII. */
 static const escp_caps nlq401d_caps = {
@@ -39,6 +40,7 @@ static const escp_caps nlq401d_caps = {
     .has_24bit_gfx = 0,
     .esc_A_unit = PE_UNITS_PER_INCH / 72,
     .default_intl = 2,
+    .lf_after_cr = 0,
 };
 static void nlq401d_init(void *st, pe_engine *e) { escp_init((escp *)st, &nlq401d_caps, e); }
 static void nlq401_init(void *st, pe_engine *e) { escp_init((escp *)st, &nlq401_caps, e); }

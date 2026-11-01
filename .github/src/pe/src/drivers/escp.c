@@ -923,6 +923,7 @@ void escp_byte(escp *s, pe_engine *e, uint8_t b) {
       return;
     case 0x0D:                              /* CR    */
       carriage_return(s, e);
+      if (s->caps->lf_after_cr) line_feed(s, e);
       return;
     case 0x0E: s->expanded_line = 1; return; /* SO   */
     case 0x0F: s->condensed = 1; return;     /* SI   */

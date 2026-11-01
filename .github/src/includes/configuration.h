@@ -336,7 +336,8 @@ typedef struct
   bool bPrintToFile;                    /* write the raw printer data to .prn file */
   bool bPrintToPdf;                     /* render the printer data into PDF files */
   char szPrinterModel[FILENAME_MAX];    /* emulated printer id, e.g. "p6" */
-  bool bPrinterSound;                   /* needle noise while printing + alert when the PDF is done */
+  bool bPrinterSound;                   /* needle noise while printing */
+  bool bPrinterAlert;                   /* message when a PDF print job is finished */
   int nPdfIdleSeconds;                  /* seconds without data that end a PDF job */
   int nPaperType;                       /* 0 = A4 single sheet, 1 = fanfold 12" x 240 mm */
   char szPdfFileName[FILENAME_MAX];     /* base name of the PDF files */
