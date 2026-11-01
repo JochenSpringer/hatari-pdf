@@ -1,0 +1,420 @@
+/*
+  Hatari - dlgDevice.c
+
+  This file is distributed under the GNU General Public License, version 2
+  or at your option any later version. Read the file gpl.txt for details.
+
+  Device (Printer etc.) setup dialog
+*/
+const char DlgDevice_fileid[] = "Hatari dlgDevice.c";
+
+#include <assert.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include "main.h"
+#include "configuration.h"
+#include "dialog.h"
+#include "sdlgui.h"
+#include "file.h"
+#include "midi.h"  /* needed only with PortMidi */
+#include "str.h"
+#include "printer_pdf.h"
+
+
+#define DEVDLG_PRNENABLE       3
+#define DEVDLG_PDFENABLE       4
+#define DEVDLG_PDFSETUP        5
+#define DEVDLG_PRNTOFILE       6
+#define DEVDLG_PRNBROWSE       7
+#define DEVDLG_PRNFILENAME     8
+#define DEVDLG_RS232ENABLE     10
+#define DEVDLG_RS232OUTBROWSE  12
+#define DEVDLG_RS232OUTNAME    13
+#define DEVDLG_RS232INBROWSE   15
+#define DEVDLG_RS232INNAME     16
+#define DEVDLG_MIDIENABLE      18
+#ifndef HAVE_PORTMIDI
+#define DEVDLG_MIDIINBROWSE    20
+#define DEVDLG_MIDIINNAME      21
+#define DEVDLG_MIDIOUTBROWSE   23
+#define DEVDLG_MIDIOUTNAME     24
+#define DEVDLG_EXIT            25
+#else
+#define DEVDLG_PREVIN          20
+#define DEVDLG_NEXTIN          21
+#define DEVDLG_MIDIINNAME      23
+#define DEVDLG_PREVOUT         25
+#define DEVDLG_NEXTOUT         26
+#define DEVDLG_MIDIOUTNAME     28
+#define DEVDLG_EXIT            29
+#endif
+
+
+#define MAX_DLG_FILENAME 46+1
+static char dlgPrinterName[MAX_DLG_FILENAME];
+static char dlgPdfModel[MAX_DLG_FILENAME];
+static char dlgPdfPaper[MAX_DLG_FILENAME];
+static char dlgPdfName[MAX_DLG_FILENAME];
+static char dlgRs232OutName[MAX_DLG_FILENAME];
+static char dlgRs232InName[MAX_DLG_FILENAME];
+static char dlgMidiInName[MAX_DLG_FILENAME];
+static char dlgMidiOutName[MAX_DLG_FILENAME];
+
+/* The devices dialog: */
+static SGOBJ devicedlg[] =
+{
+	{ SGBOX, 0, 0, 0,0, 52,24, NULL },
+	{ SGTEXT, 0, 0, 20,1, 13,1, "Devices setup" },
+
+	{ SGBOX, 0, 0, 1,3, 50,4, NULL },
+ 	{ SGCHECKBOX, 0, 0,  2,3, 26,1, "Enable _printer emulation" },
+ 	{ SGCHECKBOX, 0, 0,  3,4, 20,1, "Print to P_DF" },
+ 	{ SGBUTTON,   0, 0, 36,4, 14,1, "PDF set_up..." },
+ 	{ SGCHECKBOX, 0, 0,  3,5, 16,1, "Print to _file:" },
+ 	{ SGBUTTON,   0, 0, 42,5,  8,1, "_Browse" },
+ 	{ SGTEXT, 0, 0, 3,6, 46,1, dlgPrinterName },
+
+	{ SGBOX, 0, 0, 1,8, 50,6, NULL },
+ 	{ SGCHECKBOX, 0, 0,  2,8, 24,1, "Enable _RS232 emulation" },
+ 	{ SGTEXT, 0, 0, 2,10, 10,1, "Write RS232 output to file:" },
+ 	{ SGBUTTON,   0, 0, 42,10, 8,1, "Br_owse" },
+ 	{ SGTEXT, 0, 0, 3,11, 46,1, dlgRs232OutName },
+ 	{ SGTEXT, 0, 0, 2,12, 10,1, "Read RS232 input from file:" },
+ 	{ SGBUTTON,   0, 0, 42,12, 8,1, "Bro_wse" },
+ 	{ SGTEXT, 0, 0, 3,13, 46,1, dlgRs232InName },
+
+	{ SGBOX, 0, 0, 1,15, 50,6, NULL },
+ 	{ SGCHECKBOX, 0, 0, 2,15, 23,1, "Enable _MIDI emulation" },
+#ifndef HAVE_PORTMIDI
+ 	{ SGTEXT, 0, 0, 2,17, 26,1, "Read MIDI input from file:" },
+ 	{ SGBUTTON,   0, 0, 42,17, 8,1, "Brow_se" },
+ 	{ SGTEXT, 0, 0, 3,18, 46,1, dlgMidiInName },
+ 	{ SGTEXT, 0, 0, 2,19, 26,1, "Write MIDI output to file:" },
+ 	{ SGBUTTON,   0, 0, 42,19, 8,1, "Brows_e" },
+ 	{ SGTEXT, 0, 0, 3,20, 46,1, dlgMidiOutName },
+#else
+ 	{ SGTEXT, 0, 0, 5,17, 7,1, "input:" },
+	{ SGBUTTON, 0, 0,  12,17, 3,1, "\x04", SG_SHORTCUT_LEFT },
+	{ SGBUTTON, 0, 0, 15,17, 3,1, "\x03", SG_SHORTCUT_RIGHT },
+	{ SGBOX, 0, 0, 18,17, 32,1, NULL },
+	{ SGTEXT, 0, 0, 19,17, 30,1, dlgMidiInName },
+ 	{ SGTEXT, 0, 0, 4,19, 7,1, "output:" },
+	{ SGBUTTON, 0, 0,  12,19, 3,1, "\x04", SG_SHORTCUT_LEFT },
+	{ SGBUTTON, 0, 0, 15,19, 3,1, "\x03", SG_SHORTCUT_RIGHT },
+	{ SGBOX, 0, 0, 18,19, 32,1, NULL },
+	{ SGTEXT, 0, 0, 19,19, 30,1, dlgMidiOutName },
+#endif
+ 	{ SGBUTTON, SG_DEFAULT, 0, 16,22, 20,1, "Back to main menu" },
+	{ SGSTOP, 0, 0, 0,0, 0,0, NULL }
+};
+
+/* The PDF printer setup dialog: */
+#define PDFDLG_MODELPREV   4
+#define PDFDLG_MODELNEXT   5
+#define PDFDLG_MODELNAME   7
+#define PDFDLG_PAPERPREV   9
+#define PDFDLG_PAPERNEXT   10
+#define PDFDLG_PAPERNAME   12
+#define PDFDLG_IDLEPREV    14
+#define PDFDLG_IDLENEXT    15
+#define PDFDLG_IDLENAME    17
+#define PDFDLG_BROWSE      19
+#define PDFDLG_FILENAME    20
+#define PDFDLG_SOUND       22
+#define PDFDLG_ALERT       23
+#define PDFDLG_EXIT        24
+
+/* seconds without data after which a print job (= one PDF file) ends */
+static const int PdfIdleChoices[] = { 5, 15, 30, 60, 120, 300, 600 };
+#define NUM_PDF_IDLE ((int)(sizeof(PdfIdleChoices) / sizeof(PdfIdleChoices[0])))
+static char dlgPdfIdle[20];
+
+static SGOBJ pdfdlg[] =
+{
+	{ SGBOX, 0, 0, 0,0, 52,18, NULL },
+	{ SGTEXT, 0, 0, 17,1, 18,1, "PDF printer setup" },
+
+	{ SGBOX, 0, 0, 1,3, 50,12, NULL },
+	{ SGTEXT, 0, 0, 2,4, 14,1, "Printer model:" },
+	{ SGBUTTON, 0, 0, 17,4, 3,1, "\x04", SG_SHORTCUT_LEFT },
+	{ SGBUTTON, 0, 0, 20,4, 3,1, "\x03", SG_SHORTCUT_RIGHT },
+	{ SGBOX, 0, 0, 23,4, 27,1, NULL },
+	{ SGTEXT, 0, 0, 24,4, 25,1, dlgPdfModel },
+	{ SGTEXT, 0, 0, 2,6, 14,1, "Paper:" },
+	{ SGBUTTON, 0, 0, 17,6, 3,1, "\x04" },
+	{ SGBUTTON, 0, 0, 20,6, 3,1, "\x03" },
+	{ SGBOX, 0, 0, 23,6, 27,1, NULL },
+	{ SGTEXT, 0, 0, 24,6, 25,1, dlgPdfPaper },
+	{ SGTEXT, 0, 0, 2,8, 14,1, "Job ends after:" },
+	{ SGBUTTON, 0, 0, 17,8, 3,1, "\x04" },
+	{ SGBUTTON, 0, 0, 20,8, 3,1, "\x03" },
+	{ SGBOX, 0, 0, 23,8, 27,1, NULL },
+	{ SGTEXT, 0, 0, 24,8, 25,1, dlgPdfIdle },
+	{ SGTEXT, 0, 0, 2,10, 32,1, "PDF file (time stamp is added):" },
+	{ SGBUTTON, 0, 0, 42,10, 8,1, "_Browse" },
+	{ SGTEXT, 0, 0, 3,11, 46,1, dlgPdfName },
+	{ SGTEXT, 0, 0, 3,12, 46,1, "-> name_YYYYMMDD_HHMMSS.pdf per print job" },
+	{ SGCHECKBOX, 0, 0, 3,13, 40,1, "Printer noise while printing" },
+	{ SGCHECKBOX, 0, 0, 3,14, 40,1, "Message when printout is finished" },
+
+	{ SGBUTTON, SG_DEFAULT, 0, 16,16, 20,1, "Back to device menu" },
+	{ SGSTOP, 0, 0, 0,0, 0,0, NULL }
+};
+
+
+/*-----------------------------------------------------------------------*/
+/**
+ * Show and process the "PDF printer setup" dialog.
+ */
+static void PdfIdleText(int idx)
+{
+	int s = PdfIdleChoices[idx];
+	if (s >= 60)
+		snprintf(dlgPdfIdle, sizeof(dlgPdfIdle), "%d min no data", s / 60);
+	else
+		snprintf(dlgPdfIdle, sizeof(dlgPdfIdle), "%d s no data", s);
+}
+
+static void DlgDevice_PdfSetup(void)
+{
+	int but;
+	int nModels = PrinterPdf_NumModels();
+	int nPapers = PrinterPdf_NumPapers();
+	int model = PrinterPdf_FindModel(ConfigureParams.Printer.szPrinterModel);
+	int paper = ConfigureParams.Printer.nPaperType;
+	int idle = 2, i;
+
+	if (paper < 0 || paper >= nPapers)
+		paper = 0;
+	for (i = 0; i < NUM_PDF_IDLE; i++)
+		if (PdfIdleChoices[i] == ConfigureParams.Printer.nPdfIdleSeconds)
+			idle = i;
+	PdfIdleText(idle);
+	if (ConfigureParams.Printer.bPrinterSound)
+		pdfdlg[PDFDLG_SOUND].state |= SG_SELECTED;
+	else
+		pdfdlg[PDFDLG_SOUND].state &= ~SG_SELECTED;
+	if (ConfigureParams.Printer.bPrinterAlert)
+		pdfdlg[PDFDLG_ALERT].state |= SG_SELECTED;
+	else
+		pdfdlg[PDFDLG_ALERT].state &= ~SG_SELECTED;
+
+	SDLGui_CenterDlg(pdfdlg);
+
+	File_ShrinkName(dlgPdfModel, PrinterPdf_ModelName(model), pdfdlg[PDFDLG_MODELNAME].w);
+	File_ShrinkName(dlgPdfPaper, PrinterPdf_PaperName(paper), pdfdlg[PDFDLG_PAPERNAME].w);
+	File_ShrinkName(dlgPdfName, ConfigureParams.Printer.szPdfFileName, pdfdlg[PDFDLG_FILENAME].w);
+
+	do
+	{
+		but = SDLGui_DoDialog(pdfdlg);
+
+		switch (but)
+		{
+		 case PDFDLG_MODELPREV:
+			model = (model + nModels - 1) % nModels;
+			File_ShrinkName(dlgPdfModel, PrinterPdf_ModelName(model), pdfdlg[PDFDLG_MODELNAME].w);
+			break;
+		 case PDFDLG_MODELNEXT:
+			model = (model + 1) % nModels;
+			File_ShrinkName(dlgPdfModel, PrinterPdf_ModelName(model), pdfdlg[PDFDLG_MODELNAME].w);
+			break;
+		 case PDFDLG_PAPERPREV:
+			paper = (paper + nPapers - 1) % nPapers;
+			File_ShrinkName(dlgPdfPaper, PrinterPdf_PaperName(paper), pdfdlg[PDFDLG_PAPERNAME].w);
+			break;
+		 case PDFDLG_PAPERNEXT:
+			paper = (paper + 1) % nPapers;
+			File_ShrinkName(dlgPdfPaper, PrinterPdf_PaperName(paper), pdfdlg[PDFDLG_PAPERNAME].w);
+			break;
+		 case PDFDLG_IDLEPREV:
+			idle = (idle + NUM_PDF_IDLE - 1) % NUM_PDF_IDLE;
+			PdfIdleText(idle);
+			break;
+		 case PDFDLG_IDLENEXT:
+			idle = (idle + 1) % NUM_PDF_IDLE;
+			PdfIdleText(idle);
+			break;
+		 case PDFDLG_BROWSE:
+			/* SDLGui_FileConfSelect() would clear the setting when only a
+			 * folder is chosen, so do the selection here: a folder is
+			 * accepted too, the files are then named hatari_<time>.pdf */
+			{
+				char *selname = SDLGui_FileSelect("PDF folder / file name:",
+				                                  ConfigureParams.Printer.szPdfFileName,
+				                                  NULL, true);
+				if (selname)
+				{
+					size_t len = strlen(selname);
+					if (len > 0 && (selname[len-1] == '/' || selname[len-1] == PATHSEP))
+					{
+						snprintf(ConfigureParams.Printer.szPdfFileName,
+						         sizeof(ConfigureParams.Printer.szPdfFileName),
+						         "%shatari.pdf", selname);
+					}
+					else if (len > 0)
+					{
+						Str_Copy(ConfigureParams.Printer.szPdfFileName, selname,
+						         sizeof(ConfigureParams.Printer.szPdfFileName));
+					}
+					File_ShrinkName(dlgPdfName, ConfigureParams.Printer.szPdfFileName,
+					                pdfdlg[PDFDLG_FILENAME].w);
+					free(selname);
+				}
+			}
+			break;
+		}
+	}
+	while (but != PDFDLG_EXIT && but != SDLGUI_QUIT
+	       && but != SDLGUI_ERROR && !bQuitProgram);
+
+	Str_Copy(ConfigureParams.Printer.szPrinterModel, PrinterPdf_ModelId(model),
+	         sizeof(ConfigureParams.Printer.szPrinterModel));
+	ConfigureParams.Printer.nPaperType = paper;
+	ConfigureParams.Printer.nPdfIdleSeconds = PdfIdleChoices[idle];
+	ConfigureParams.Printer.bPrinterSound = (pdfdlg[PDFDLG_SOUND].state & SG_SELECTED) != 0;
+	ConfigureParams.Printer.bPrinterAlert = (pdfdlg[PDFDLG_ALERT].state & SG_SELECTED) != 0;
+}
+
+
+/*-----------------------------------------------------------------------*/
+/**
+ * Show and process the "Device" dialog.
+ */
+void Dialog_DeviceDlg(void)
+{
+	int but;
+#ifdef HAVE_PORTMIDI
+	const char *name, *midiInName, *midiOutName;
+#endif
+
+	SDLGui_CenterDlg(devicedlg);
+
+	/* Set up dialog from actual values: */
+
+	if (ConfigureParams.Printer.bEnablePrinting)
+		devicedlg[DEVDLG_PRNENABLE].state |= SG_SELECTED;
+	else
+		devicedlg[DEVDLG_PRNENABLE].state &= ~SG_SELECTED;
+	if (ConfigureParams.Printer.bPrintToPdf)
+		devicedlg[DEVDLG_PDFENABLE].state |= SG_SELECTED;
+	else
+		devicedlg[DEVDLG_PDFENABLE].state &= ~SG_SELECTED;
+	if (ConfigureParams.Printer.bPrintToFile)
+		devicedlg[DEVDLG_PRNTOFILE].state |= SG_SELECTED;
+	else
+		devicedlg[DEVDLG_PRNTOFILE].state &= ~SG_SELECTED;
+	File_ShrinkName(dlgPrinterName, ConfigureParams.Printer.szPrintToFileName, devicedlg[DEVDLG_PRNFILENAME].w);
+
+	if (ConfigureParams.RS232.bEnableRS232)
+		devicedlg[DEVDLG_RS232ENABLE].state |= SG_SELECTED;
+	else
+		devicedlg[DEVDLG_RS232ENABLE].state &= ~SG_SELECTED;
+	File_ShrinkName(dlgRs232OutName, ConfigureParams.RS232.szOutFileName, devicedlg[DEVDLG_RS232OUTNAME].w);
+	File_ShrinkName(dlgRs232InName, ConfigureParams.RS232.szInFileName, devicedlg[DEVDLG_RS232INNAME].w);
+
+	if (ConfigureParams.Midi.bEnableMidi)
+		devicedlg[DEVDLG_MIDIENABLE].state |= SG_SELECTED;
+	else
+		devicedlg[DEVDLG_MIDIENABLE].state &= ~SG_SELECTED;
+#ifndef HAVE_PORTMIDI
+	File_ShrinkName(dlgMidiInName, ConfigureParams.Midi.sMidiInFileName, devicedlg[DEVDLG_MIDIINNAME].w);
+	File_ShrinkName(dlgMidiOutName, ConfigureParams.Midi.sMidiOutFileName, devicedlg[DEVDLG_MIDIOUTNAME].w);
+#else
+	midiInName = Midi_Host_GetPortName(ConfigureParams.Midi.sMidiInPortName, MIDI_NAME_FIND, MIDI_FOR_INPUT);
+	File_ShrinkName(dlgMidiInName, midiInName ? midiInName : "Off", devicedlg[DEVDLG_MIDIINNAME].w);
+
+	midiOutName = Midi_Host_GetPortName(ConfigureParams.Midi.sMidiOutPortName, MIDI_NAME_FIND, MIDI_FOR_OUTPUT);
+	File_ShrinkName(dlgMidiOutName,  midiOutName ? midiOutName : "Off", devicedlg[DEVDLG_MIDIOUTNAME].w);
+#endif
+
+	/* The devices dialog main loop */
+	do
+	{
+		but = SDLGui_DoDialog(devicedlg);
+
+		switch(but)
+		{
+		 case DEVDLG_PDFSETUP:                  /* PDF printer model, paper, file */
+			DlgDevice_PdfSetup();
+			break;
+		 case DEVDLG_PRNBROWSE:                 /* Choose a new printer file */
+			SDLGui_FileConfSelect("Printer output:", dlgPrinterName,
+                                              ConfigureParams.Printer.szPrintToFileName,
+                                              devicedlg[DEVDLG_PRNFILENAME].w,
+                                              true);
+			break;
+		 case DEVDLG_RS232OUTBROWSE:            /* Choose a new RS232 output file */
+			SDLGui_FileConfSelect("RS232 output:", dlgRs232OutName,
+                                              ConfigureParams.RS232.szOutFileName,
+                                              devicedlg[DEVDLG_RS232OUTNAME].w,
+                                              true);
+			break;
+		 case DEVDLG_RS232INBROWSE:             /* Choose a new RS232 input file */
+			SDLGui_FileConfSelect("RS232 input:", dlgRs232InName,
+                                              ConfigureParams.RS232.szInFileName,
+                                              devicedlg[DEVDLG_RS232INNAME].w,
+                                              true);
+			break;
+#ifndef HAVE_PORTMIDI
+		 case DEVDLG_MIDIINBROWSE:              /* Choose a new MIDI file */
+			SDLGui_FileConfSelect("MIDI input:", dlgMidiInName,
+                                              ConfigureParams.Midi.sMidiInFileName,
+                                              devicedlg[DEVDLG_MIDIINNAME].w,
+                                              true);
+			break;
+		 case DEVDLG_MIDIOUTBROWSE:             /* Choose a new MIDI file */
+			SDLGui_FileConfSelect("MIDI output:", dlgMidiOutName,
+                                              ConfigureParams.Midi.sMidiOutFileName,
+                                              devicedlg[DEVDLG_MIDIOUTNAME].w,
+                                              true);
+			break;
+#else
+		case DEVDLG_PREVIN:
+			midiInName = Midi_Host_GetPortName(midiInName, MIDI_NAME_PREV, MIDI_FOR_INPUT);
+			File_ShrinkName(dlgMidiInName, midiInName ? midiInName : "Off",
+					devicedlg[DEVDLG_MIDIINNAME].w);
+			break;
+		case DEVDLG_NEXTIN:
+			name = Midi_Host_GetPortName(midiInName, MIDI_NAME_NEXT, MIDI_FOR_INPUT);
+			if (name)
+			{
+				midiInName = name;
+				File_ShrinkName(dlgMidiInName, midiInName,
+						devicedlg[DEVDLG_MIDIINNAME].w);
+			}
+			break;
+		case DEVDLG_PREVOUT:
+			midiOutName = Midi_Host_GetPortName(midiOutName, MIDI_NAME_PREV, MIDI_FOR_OUTPUT);
+			File_ShrinkName(dlgMidiOutName, midiOutName ? midiOutName : "Off",
+					devicedlg[DEVDLG_MIDIOUTNAME].w);
+			break;
+		case DEVDLG_NEXTOUT:
+			name = Midi_Host_GetPortName(midiOutName, MIDI_NAME_NEXT, MIDI_FOR_OUTPUT);
+			if (name)
+			{
+				midiOutName = name;
+				File_ShrinkName(dlgMidiOutName, midiOutName,
+						devicedlg[DEVDLG_MIDIOUTNAME].w);
+			}
+			break;
+#endif
+		}
+	}
+	while (but != DEVDLG_EXIT && but != SDLGUI_QUIT
+	       && but != SDLGUI_ERROR && !bQuitProgram);
+
+	/* Read values from dialog */
+	ConfigureParams.Printer.bEnablePrinting = (devicedlg[DEVDLG_PRNENABLE].state & SG_SELECTED);
+	ConfigureParams.Printer.bPrintToPdf = (devicedlg[DEVDLG_PDFENABLE].state & SG_SELECTED);
+	ConfigureParams.Printer.bPrintToFile = (devicedlg[DEVDLG_PRNTOFILE].state & SG_SELECTED);
+	ConfigureParams.RS232.bEnableRS232 = (devicedlg[DEVDLG_RS232ENABLE].state & SG_SELECTED);
+	ConfigureParams.Midi.bEnableMidi = (devicedlg[DEVDLG_MIDIENABLE].state & SG_SELECTED);
+#ifdef HAVE_PORTMIDI
+	Str_Copy(ConfigureParams.Midi.sMidiInPortName, midiInName ? midiInName : "Off",
+	         sizeof(ConfigureParams.Midi.sMidiInPortName));
+	Str_Copy(ConfigureParams.Midi.sMidiOutPortName, midiOutName ? midiOutName : "Off",
+	         sizeof(ConfigureParams.Midi.sMidiOutPortName));
+#endif
+}
