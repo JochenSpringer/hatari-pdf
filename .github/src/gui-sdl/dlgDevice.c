@@ -121,10 +121,11 @@ static SGOBJ devicedlg[] =
 #define PDFDLG_IDLENAME    17
 #define PDFDLG_BROWSE      19
 #define PDFDLG_FILENAME    20
-#define PDFDLG_EXIT        22
+#define PDFDLG_SOUND       22
+#define PDFDLG_EXIT        23
 
 /* seconds without data after which a print job (= one PDF file) ends */
-static const int PdfIdleChoices[] = { 5, 15, 30, 60, 120, 300 };
+static const int PdfIdleChoices[] = { 5, 15, 30, 60, 120, 300, 600 };
 #define NUM_PDF_IDLE ((int)(sizeof(PdfIdleChoices) / sizeof(PdfIdleChoices[0])))
 static char dlgPdfIdle[20];
 
@@ -153,6 +154,7 @@ static SGOBJ pdfdlg[] =
 	{ SGBUTTON, 0, 0, 42,10, 8,1, "_Browse" },
 	{ SGTEXT, 0, 0, 3,11, 46,1, dlgPdfName },
 	{ SGTEXT, 0, 0, 3,12, 46,1, "-> name_YYYYMMDD_HHMMSS.pdf per print job" },
+	{ SGCHECKBOX, 0, 0, 3,13, 40,1, "Printer noise and finish message" },
 
 	{ SGBUTTON, SG_DEFAULT, 0, 16,15, 20,1, "Back to device menu" },
 	{ SGSTOP, 0, 0, 0,0, 0,0, NULL }
@@ -187,6 +189,10 @@ static void DlgDevice_PdfSetup(void)
 		if (PdfIdleChoices[i] == ConfigureParams.Printer.nPdfIdleSeconds)
 			idle = i;
 	PdfIdleText(idle);
+	if (ConfigureParams.Printer.bPrinterSound)
+		pdfdlg[PDFDLG_SOUND].state |= SG_SELECTED;
+	else
+		pdfdlg[PDFDLG_SOUND].state &= ~SG_SELECTED;
 
 	SDLGui_CenterDlg(pdfdlg);
 
@@ -261,6 +267,7 @@ static void DlgDevice_PdfSetup(void)
 	         sizeof(ConfigureParams.Printer.szPrinterModel));
 	ConfigureParams.Printer.nPaperType = paper;
 	ConfigureParams.Printer.nPdfIdleSeconds = PdfIdleChoices[idle];
+	ConfigureParams.Printer.bPrinterSound = (pdfdlg[PDFDLG_SOUND].state & SG_SELECTED) != 0;
 }
 
 

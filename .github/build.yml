@@ -58,7 +58,7 @@ jobs:
             if [ -n "$cand" ]; then echo "VERSCHOBEN $target <- $cand"; mkdir -p "$(dirname "$target")"; cp "$cand" "$target"
             else echo "FEHLT     $target"; missing=1; fi
           }
-          heal escp.c        set_form_length         src/pe/src/drivers/escp.c
+          heal escp.c        ST_FS_STAR              src/pe/src/drivers/escp.c
           heal escp.h        default_intl                  src/pe/src/drivers/escp.h
           heal font.h        "uint8_t dot"           src/pe/include/pe/font.h
           heal driver.h      pe_driver_nlq401d          src/pe/include/pe/driver.h
@@ -69,9 +69,14 @@ jobs:
           heal printer_pdf.c "green bars"            src/printer_pdf.c
           heal CMakeLists.txt PE_SOURCES             src/pe/CMakeLists.txt
           heal printer.c       nPdfIdleCount          src/printer.c
-          heal configuration.c nPdfIdleSeconds        src/configuration.c
-          heal configuration.h nPdfIdleSeconds        src/includes/configuration.h
-          heal dlgDevice.c     PdfIdleChoices         src/gui-sdl/dlgDevice.c
+          heal printer_sound.c PrinterSound_Start     src/printer_sound.c
+          heal printer_pdf.h   PrinterSound_Start     src/includes/printer_pdf.h
+          heal printer_pdf.c   PrinterPdf_CloseJob    src/printer_pdf.c
+          heal CMakeLists.txt  printer_sound.c       src/CMakeLists.txt
+          heal printer_sound_data.c PrinterSound_Data src/printer_sound_data.c
+          heal configuration.c bPrinterSound          src/configuration.c
+          heal configuration.h bPrinterSound          src/includes/configuration.h
+          heal dlgDevice.c     PDFDLG_SOUND           src/gui-sdl/dlgDevice.c
           for f in eplq lq800 fx80 kxp2023 lc24 nlq401; do need src/pe/src/drivers/$f.c; done
           need src/pe/include/pe/rom_fonts.h
           for f in fx80_courier kxp_boldps kxp_courier kxp_draft kxp_prestige kxp_script lc24_courier lc24_courier_italic lc24_draft lc24_draft_bold lc24_draft_italic lc24_orator lc24_prestige lc24_prestige_italic lc24_script lq800_draft lq800_roman lq800_sans nlq401_draft nlq401_nlq; do need src/pe/src/fonts/font_$f.c; done

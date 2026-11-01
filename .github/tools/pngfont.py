@@ -27,7 +27,8 @@ GERMAN = [0xA7, 0xC4, 0xD6, 0xDC, 0xE4, 0xF6, 0xFC, 0xDF]   # § Ä Ö Ü ä ö 
 
 
 def dots(img):
-    a = 255 - np.array(img.convert("L")).astype(float)
+    # red arrows in the chart mark characters with software descenders: ignore
+    a = 255 - np.array(img.convert("RGB")).astype(float).max(axis=2)
     s = ndimage.gaussian_filter(a, 0.8)
     mx = (s == ndimage.maximum_filter(s, size=3)) & (s > 100)
     ys, xs = np.nonzero(mx)

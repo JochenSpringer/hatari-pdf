@@ -195,7 +195,9 @@ static const pe_font *font_for(const escp *s) {
 
 static int32_t char_width(const escp *s) {
   int32_t w = s->condensed ? pitch_cond[s->cpi] : pitch_normal[s->cpi];
-  if (s->fs_wide) w = w * 5 / 3; /* 39 characters = 6.5 inch at pica */
+  if (s->fs_wide == 1) w = w * 5 / 3; /* NEC: 39 characters = 6.5 inch at pica */
+  else if (s->fs_wide == 2) w *= 2;     /* Star FS E 1: double wide */
+  else if (s->fs_wide == 3) w *= 3;     /* Star FS E 2: triple wide */
   else if (s->expanded || s->expanded_line) w *= 2;
   return w;
 }
@@ -533,14 +535,21 @@ static void do_htab(escp *s, pe_engine *e) {
   }
 }
 
+/* VT also returns the carriage to the left margin (Epson/Star manuals).
+ * The 1st Word Plus FX-80 / LQ-800 drivers end every line with ESC B n 0, VT
+ * and send no CR at all. */
 static void do_vtab(escp *s, pe_engine *e) {
   for (int i = 0; i < s->nvtab; i++) {
     if (s->vtab[i] > e->y) {
       feed(s, e, s->vtab[i] - e->y);
+      carriage_return(s, e);
+      s->expanded_line = 0;
       return;
     }
   }
   line_feed(s, e);
+  carriage_return(s, e);
+  s->expanded_line = 0;
 }
 
 /* ------------------------------------------------------------------ */
@@ -557,7 +566,8 @@ enum {
   ST_VTABS,
   ST_SKIP, /* swallow n bytes of an unsupported extended command */
   ST_FS,   /* NEC FS (0x1C) command: next byte selects it */
-  ST_FS_E  /* parameter of FS E: double width on/off */
+  ST_FS_E, /* parameter of FS E: double width on/off */
+  ST_FS_STAR /* parameter of a Star FS command (s->cmd) */
 };
 
 void escp_reset(escp *s, pe_engine *e) {
@@ -809,6 +819,20 @@ void escp_byte(escp *s, pe_engine *e, uint8_t b) {
       return;
 
     case ST_FS:
+      if (s->caps->star_fs) {
+        /* Star LC24-10 standard mode: <FS> is the second command prefix */
+        s->cmd = b;
+        switch (b) {
+          case 'E': case 'C': case 'I': case 'V': case 'S': case '3': case 'A':
+            s->st = ST_FS_STAR; return;
+          case '4': s->italic = 1; break;
+          case '5': s->italic = 0; break;
+          case '2': s->line_spacing = PE_UNITS_PER_INCH / 6; break;
+          default: break;           /* F, R, ... : no effect on the PDF */
+        }
+        s->st = ST_DATA;
+        return;
+      }
       /* NEC Pinwriter FS commands.  FS E n is double width, FS C n (font
        * card) and a few others carry one parameter we do not render, but
        * neither the command letter nor the parameter may be printed. */
@@ -822,11 +846,27 @@ void escp_byte(escp *s, pe_engine *e, uint8_t b) {
       }
       return;
 
+    case ST_FS_STAR:
+      switch (s->cmd) {
+        case 'E': s->fs_wide = (b == 1 || b == '1') ? 2 : (b == 2 || b == '2') ? 3 : 0; break;
+        case 'C': {
+          int id = (b >= '0') ? b - '0' : b;
+          for (int i = 0; i < s->caps->ntypefaces; i++)
+            if (s->caps->typefaces[i].id == id) s->typeface = (uint8_t)i;
+          break;
+        }
+        case '3': s->line_spacing = (int32_t)b * (PE_UNITS_PER_INCH / 360); break;
+        case 'A': s->line_spacing = (int32_t)b * (PE_UNITS_PER_INCH / 60); break;
+        default: break;             /* I (character set), V (height), S (elite speed) */
+      }
+      s->st = ST_DATA;
+      return;
+
     case ST_FS_E:
       /* FS E n: wide print on (1) / off (0).  The 1st Word Plus driver
        * switches it around the text of each line and justifies 39
        * characters to 6.5 inch, so the wide cell is 5/3 of the pica cell. */
-      s->fs_wide = (b == 1 || b == '1');
+      s->fs_wide = (b == 1 || b == '1') ? 1 : 0;
       s->st = ST_DATA;
       return;
 
@@ -892,7 +932,7 @@ void escp_byte(escp *s, pe_engine *e, uint8_t b) {
     case 0x14: s->expanded_line = 0; return; /* DC4  */
     case 0x18: return;                       /* CAN  */
     case 0x1B: s->st = ST_ESC; return;       /* ESC  */
-    case 0x1C: if (s->caps->nec_fs) s->st = ST_FS; return; /* FS */
+    case 0x1C: if (s->caps->nec_fs || s->caps->star_fs) s->st = ST_FS; return; /* FS */
     case 0x7F: return;                       /* DEL  */
     default: break;
   }

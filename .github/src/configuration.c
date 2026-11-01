@@ -524,6 +524,7 @@ static const struct Config_Tag configs_Printer[] =
 	{ "bPrintToPdf", Bool_Tag, &ConfigureParams.Printer.bPrintToPdf },
 	{ "szPrinterModel", String_Tag, ConfigureParams.Printer.szPrinterModel },
 	{ "nPaperType", Int_Tag, &ConfigureParams.Printer.nPaperType },
+	{ "bPrinterSound", Bool_Tag, &ConfigureParams.Printer.bPrinterSound },
 	{ "nPdfIdleSeconds", Int_Tag, &ConfigureParams.Printer.nPdfIdleSeconds },
 	{ "szPdfFileName", String_Tag, ConfigureParams.Printer.szPdfFileName },
 	{ NULL , Error_Tag, NULL }
@@ -774,6 +775,7 @@ void Configuration_SetDefault(void)
 	ConfigureParams.Printer.bPrintToFile = true;
 	ConfigureParams.Printer.bPrintToPdf = false;
 	strcpy(ConfigureParams.Printer.szPrinterModel, "p6");
+	ConfigureParams.Printer.bPrinterSound = true;
 	ConfigureParams.Printer.nPdfIdleSeconds = 30;
 	ConfigureParams.Printer.nPaperType = 0;   /* 0 = A4, 1 = fanfold */
 	File_MakePathBuf(ConfigureParams.Printer.szPdfFileName,

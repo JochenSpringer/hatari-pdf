@@ -155,14 +155,27 @@ void PrinterPdf_Byte(uint8_t Byte)
 }
 
 
-void PrinterPdf_Close(void)
+int PrinterPdf_CloseJob(void)
 {
 	int pages;
 
 	if (!pPdfJob)
-		return;
+		return 0;
 	pages = pe_job_finish(pPdfJob);
 	pPdfJob = NULL;
 	if (pages > 0)
 		Log_Printf(LOG_INFO, "Printer: %d page(s) written to %s\n", pages, sPdfPath);
+	return pages;
+}
+
+
+const char *PrinterPdf_LastPath(void)
+{
+	return sPdfPath;
+}
+
+
+void PrinterPdf_Close(void)
+{
+	(void)PrinterPdf_CloseJob();
 }

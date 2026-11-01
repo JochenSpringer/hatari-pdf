@@ -25,7 +25,7 @@ static const escp_caps lc24_caps = {
     .draft = &pe_font_lq24,
     .lq = &pe_font_prestige,
     .lq_default = 1,
-    .nec_fs = 1, /* the 1st Word Plus LC24-10 driver sends NEC FS E n */
+    .star_fs = 1, /* FS E n = double/triple width etc. (standard mode) */
     .typefaces = lc24_typefaces,
     .ntypefaces = 6,
     .gfx8_pitch = PE_UNITS_PER_INCH / 60,

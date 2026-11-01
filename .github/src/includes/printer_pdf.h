@@ -23,6 +23,11 @@ extern bool PrinterPdf_CheckOutputDir(void);
 
 /* one print job = one time stamped PDF file */
 extern bool PrinterPdf_IsOpen(void);
+extern int PrinterPdf_CloseJob(void);          /* returns pages written */
+extern const char *PrinterPdf_LastPath(void);
+extern void PrinterSound_Start(void);
+extern void PrinterSound_Stop(void);
+extern void PrinterSound_Close(void);
 extern bool PrinterPdf_Open(void);
 extern void PrinterPdf_Byte(uint8_t Byte);
 extern void PrinterPdf_Close(void);

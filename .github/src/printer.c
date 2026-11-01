@@ -36,6 +36,8 @@ const char Printer_fileid[] = "Hatari printer.c";
 /* A PDF print job (several pages in one file) ends after the configured
  * number of seconds without data, see PrinterPdf in the device dialog. */
 static int nPdfIdleCount;
+static int nLastPages;
+#define PRINTER_IDLE_SOUND 75      /* 1.5 s without data */
 static int nIdleCount;
 static int bUnflushed;
 
@@ -96,7 +98,8 @@ void Printer_UnInit(void)
 
 	/* Close any open files, finish the PDF of the current print job */
 	pPrinterHandle = File_Close(pPrinterHandle);
-	PrinterPdf_Close();
+	PrinterSound_Stop();
+	nLastPages = PrinterPdf_CloseJob();
 	bUnflushed = false;
 	nIdleCount = 0;
 	nPdfIdleCount = 0;
@@ -151,6 +154,7 @@ bool Printer_TransferByteTo(uint8_t Byte)
 		else
 		{
 			PrinterPdf_Byte(Byte);
+			PrinterSound_Start();
 			bAccepted = true;
 		}
 	}
@@ -183,6 +187,9 @@ void Printer_CheckIdleStatus(void)
 	else
 	{
 		nIdleCount++;
+		/* the needles stop a moment after the last byte */
+		if (nIdleCount == PRINTER_IDLE_SOUND)
+			PrinterSound_Stop();
 		/* raw .prn file: close after a few seconds */
 		if (nIdleCount >= PRINTER_IDLE_CLOSE && pPrinterHandle)
 			pPrinterHandle = File_Close(pPrinterHandle);
@@ -193,7 +200,14 @@ void Printer_CheckIdleStatus(void)
 			int limit = ConfigureParams.Printer.nPdfIdleSeconds;
 			if (limit < 2) limit = 2;
 			if (++nPdfIdleCount >= limit * 50)
+			{
+				int pages;
 				Printer_UnInit();
+				/* (UnInit already finished the job) */
+				pages = nLastPages;
+				if (pages > 0 && ConfigureParams.Printer.bPrinterSound)
+					Log_AlertDlg(LOG_ERROR, "Printout finished: %d page(s)\n%s", pages, PrinterPdf_LastPath());
+			}
 		}
 		else
 			nPdfIdleCount = 0;
