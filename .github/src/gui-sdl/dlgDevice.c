@@ -64,48 +64,48 @@ static char dlgMidiOutName[MAX_DLG_FILENAME];
 /* The devices dialog: */
 static SGOBJ devicedlg[] =
 {
-	{ SGBOX, 0, 0, 0,0, 52,24, NULL },
+	{ SGBOX, 0, 0, 0,0, 52,27, NULL },
 	{ SGTEXT, 0, 0, 20,1, 13,1, "Devices setup" },
 
-	{ SGBOX, 0, 0, 1,3, 50,4, NULL },
+	{ SGBOX, 0, 0, 1,3, 50,8, NULL },
  	{ SGCHECKBOX, 0, 0,  2,3, 26,1, "Enable _printer emulation" },
- 	{ SGCHECKBOX, 0, 0,  3,4, 20,1, "Print to P_DF" },
- 	{ SGBUTTON,   0, 0, 36,4, 14,1, "PDF set_up..." },
- 	{ SGCHECKBOX, 0, 0,  3,5, 16,1, "Print to _file:" },
- 	{ SGBUTTON,   0, 0, 42,5,  8,1, "_Browse" },
- 	{ SGTEXT, 0, 0, 3,6, 46,1, dlgPrinterName },
+ 	{ SGCHECKBOX, 0, 0,  3,5, 20,1, "Print to P_DF" },
+ 	{ SGBUTTON,   0, 0, 34,5, 16,1, "PDF set_up..." },
+ 	{ SGCHECKBOX, 0, 0,  3,7, 16,1, "Print to _file:" },
+ 	{ SGBUTTON,   0, 0, 42,7,  8,1, "_Browse" },
+ 	{ SGTEXT, 0, 0, 3,8, 46,1, dlgPrinterName },
 
-	{ SGBOX, 0, 0, 1,8, 50,6, NULL },
- 	{ SGCHECKBOX, 0, 0,  2,8, 24,1, "Enable _RS232 emulation" },
- 	{ SGTEXT, 0, 0, 2,10, 10,1, "Write RS232 output to file:" },
- 	{ SGBUTTON,   0, 0, 42,10, 8,1, "Br_owse" },
- 	{ SGTEXT, 0, 0, 3,11, 46,1, dlgRs232OutName },
- 	{ SGTEXT, 0, 0, 2,12, 10,1, "Read RS232 input from file:" },
- 	{ SGBUTTON,   0, 0, 42,12, 8,1, "Bro_wse" },
- 	{ SGTEXT, 0, 0, 3,13, 46,1, dlgRs232InName },
+	{ SGBOX, 0, 0, 1,12, 50,6, NULL },
+ 	{ SGCHECKBOX, 0, 0,  2,12, 24,1, "Enable _RS232 emulation" },
+ 	{ SGTEXT, 0, 0, 2,14, 10,1, "Write RS232 output to file:" },
+ 	{ SGBUTTON,   0, 0, 42,14, 8,1, "Br_owse" },
+ 	{ SGTEXT, 0, 0, 3,15, 46,1, dlgRs232OutName },
+ 	{ SGTEXT, 0, 0, 2,16, 10,1, "Read RS232 input from file:" },
+ 	{ SGBUTTON,   0, 0, 42,16, 8,1, "Bro_wse" },
+ 	{ SGTEXT, 0, 0, 3,17, 46,1, dlgRs232InName },
 
-	{ SGBOX, 0, 0, 1,15, 50,6, NULL },
- 	{ SGCHECKBOX, 0, 0, 2,15, 23,1, "Enable _MIDI emulation" },
+	{ SGBOX, 0, 0, 1,19, 50,6, NULL },
+ 	{ SGCHECKBOX, 0, 0, 2,19, 23,1, "Enable _MIDI emulation" },
 #ifndef HAVE_PORTMIDI
- 	{ SGTEXT, 0, 0, 2,17, 26,1, "Read MIDI input from file:" },
- 	{ SGBUTTON,   0, 0, 42,17, 8,1, "Brow_se" },
- 	{ SGTEXT, 0, 0, 3,18, 46,1, dlgMidiInName },
- 	{ SGTEXT, 0, 0, 2,19, 26,1, "Write MIDI output to file:" },
- 	{ SGBUTTON,   0, 0, 42,19, 8,1, "Brows_e" },
- 	{ SGTEXT, 0, 0, 3,20, 46,1, dlgMidiOutName },
+ 	{ SGTEXT, 0, 0, 2,21, 26,1, "Read MIDI input from file:" },
+ 	{ SGBUTTON,   0, 0, 42,21, 8,1, "Brow_se" },
+ 	{ SGTEXT, 0, 0, 3,22, 46,1, dlgMidiInName },
+ 	{ SGTEXT, 0, 0, 2,23, 26,1, "Write MIDI output to file:" },
+ 	{ SGBUTTON,   0, 0, 42,23, 8,1, "Brows_e" },
+ 	{ SGTEXT, 0, 0, 3,24, 46,1, dlgMidiOutName },
 #else
- 	{ SGTEXT, 0, 0, 5,17, 7,1, "input:" },
-	{ SGBUTTON, 0, 0,  12,17, 3,1, "\x04", SG_SHORTCUT_LEFT },
-	{ SGBUTTON, 0, 0, 15,17, 3,1, "\x03", SG_SHORTCUT_RIGHT },
-	{ SGBOX, 0, 0, 18,17, 32,1, NULL },
-	{ SGTEXT, 0, 0, 19,17, 30,1, dlgMidiInName },
- 	{ SGTEXT, 0, 0, 4,19, 7,1, "output:" },
-	{ SGBUTTON, 0, 0,  12,19, 3,1, "\x04", SG_SHORTCUT_LEFT },
-	{ SGBUTTON, 0, 0, 15,19, 3,1, "\x03", SG_SHORTCUT_RIGHT },
-	{ SGBOX, 0, 0, 18,19, 32,1, NULL },
-	{ SGTEXT, 0, 0, 19,19, 30,1, dlgMidiOutName },
+ 	{ SGTEXT, 0, 0, 5,21, 7,1, "input:" },
+	{ SGBUTTON, 0, 0,  12,21, 3,1, "\x04", SG_SHORTCUT_LEFT },
+	{ SGBUTTON, 0, 0, 15,21, 3,1, "\x03", SG_SHORTCUT_RIGHT },
+	{ SGBOX, 0, 0, 18,21, 32,1, NULL },
+	{ SGTEXT, 0, 0, 19,21, 30,1, dlgMidiInName },
+ 	{ SGTEXT, 0, 0, 4,23, 7,1, "output:" },
+	{ SGBUTTON, 0, 0,  12,23, 3,1, "\x04", SG_SHORTCUT_LEFT },
+	{ SGBUTTON, 0, 0, 15,23, 3,1, "\x03", SG_SHORTCUT_RIGHT },
+	{ SGBOX, 0, 0, 18,23, 32,1, NULL },
+	{ SGTEXT, 0, 0, 19,23, 30,1, dlgMidiOutName },
 #endif
- 	{ SGBUTTON, SG_DEFAULT, 0, 16,22, 20,1, "Back to main menu" },
+ 	{ SGBUTTON, SG_DEFAULT, 0, 16,26, 20,1, "Back to main menu" },
 	{ SGSTOP, 0, 0, 0,0, 0,0, NULL }
 };
 
@@ -132,10 +132,10 @@ static char dlgPdfIdle[20];
 
 static SGOBJ pdfdlg[] =
 {
-	{ SGBOX, 0, 0, 0,0, 52,18, NULL },
+	{ SGBOX, 0, 0, 0,0, 52,21, NULL },
 	{ SGTEXT, 0, 0, 17,1, 18,1, "PDF printer setup" },
 
-	{ SGBOX, 0, 0, 1,3, 50,12, NULL },
+	{ SGBOX, 0, 0, 1,3, 50,15, NULL },
 	{ SGTEXT, 0, 0, 2,4, 14,1, "Printer model:" },
 	{ SGBUTTON, 0, 0, 17,4, 3,1, "\x04", SG_SHORTCUT_LEFT },
 	{ SGBUTTON, 0, 0, 20,4, 3,1, "\x03", SG_SHORTCUT_RIGHT },
@@ -151,14 +151,14 @@ static SGOBJ pdfdlg[] =
 	{ SGBUTTON, 0, 0, 20,8, 3,1, "\x03" },
 	{ SGBOX, 0, 0, 23,8, 27,1, NULL },
 	{ SGTEXT, 0, 0, 24,8, 25,1, dlgPdfIdle },
-	{ SGTEXT, 0, 0, 2,10, 32,1, "PDF file (time stamp is added):" },
-	{ SGBUTTON, 0, 0, 42,10, 8,1, "_Browse" },
-	{ SGTEXT, 0, 0, 3,11, 46,1, dlgPdfName },
-	{ SGTEXT, 0, 0, 3,12, 46,1, "-> name_YYYYMMDD_HHMMSS.pdf per print job" },
-	{ SGCHECKBOX, 0, 0, 3,13, 40,1, "Printer noise while printing" },
-	{ SGCHECKBOX, 0, 0, 3,14, 40,1, "Message when printout is finished" },
+	{ SGTEXT, 0, 0, 2,11, 32,1, "PDF file (time stamp is added):" },
+	{ SGBUTTON, 0, 0, 42,11, 8,1, "_Browse" },
+	{ SGTEXT, 0, 0, 3,12, 46,1, dlgPdfName },
+	{ SGTEXT, 0, 0, 3,13, 46,1, "-> name_YYYYMMDD_HHMMSS.pdf per print job" },
+	{ SGCHECKBOX, 0, 0, 3,15, 40,1, "Printer noise while printing" },
+	{ SGCHECKBOX, 0, 0, 3,16, 40,1, "Message when printout is finished" },
 
-	{ SGBUTTON, SG_DEFAULT, 0, 16,16, 20,1, "Back to device menu" },
+	{ SGBUTTON, SG_DEFAULT, 0, 16,19, 20,1, "Back to device menu" },
 	{ SGSTOP, 0, 0, 0,0, 0,0, NULL }
 };
 

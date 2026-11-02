@@ -825,8 +825,6 @@ void escp_byte(escp *s, pe_engine *e, uint8_t b) {
         switch (b) {
           case 'E': case 'C': case 'I': case 'V': case 'S': case '3': case 'A':
             s->st = ST_FS_STAR; return;
-          case '4': s->italic = 1; break;
-          case '5': s->italic = 0; break;
           case '2': s->line_spacing = PE_UNITS_PER_INCH / 6; break;
           default: break;           /* F, R, ... : no effect on the PDF */
         }
@@ -856,7 +854,7 @@ void escp_byte(escp *s, pe_engine *e, uint8_t b) {
           break;
         }
         case '3': s->line_spacing = (int32_t)b * (PE_UNITS_PER_INCH / 360); break;
-        case 'A': s->line_spacing = (int32_t)b * (PE_UNITS_PER_INCH / 60); break;
+        case 'A': s->line_spacing = (int32_t)b * (PE_UNITS_PER_INCH / 72); break;  /* IBM mode */
         default: break;             /* I (character set), V (height), S (elite speed) */
       }
       s->st = ST_DATA;
