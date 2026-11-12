@@ -59,6 +59,7 @@ const pe_driver pe_driver_nlq401 = {
     .reset = nlq401_reset,
     .byte = nlq401_byte,
     .eoj = nlq401_eoj,
+    .fanfold_dy = 85, /* 1 mm lower: the text stands inside the green reading bars */
 };
 
 const pe_driver pe_driver_nlq401d = {
@@ -72,4 +73,5 @@ const pe_driver pe_driver_nlq401d = {
     .reset = nlq401_reset,
     .byte = nlq401_byte,
     .eoj = nlq401_eoj,
+    .fanfold_dy = 85, /* 1 mm lower: the text stands inside the green reading bars */
 };

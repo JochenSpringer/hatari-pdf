@@ -26,7 +26,7 @@ X0 = -1.1
 GERMAN = [0xA7, 0xC4, 0xD6, 0xDC, 0xE4, 0xF6, 0xFC, 0xDF]   # § Ä Ö Ü ä ö ü ß
 
 
-def dots(img):
+def dots(img, MERGE=2.6):
     # red arrows in the chart mark characters with software descenders: ignore
     a = 255 - np.array(img.convert("RGB")).astype(float).max(axis=2)
     s = ndimage.gaussian_filter(a, 0.8)
@@ -35,7 +35,7 @@ def dots(img):
     pts = sorted(zip(ys.tolist(), xs.tolist()))
     out = []                         # merge duplicates (plateaus) closer than 2.5 px
     for y, x in pts:
-        if any(abs(y - oy) < 2.6 and abs(x - ox) < 2.6 for oy, ox in out[-40:]):
+        if any(abs(y - oy) < MERGE and abs(x - ox) < MERGE for oy, ox in out[-40:]):
             continue
         out.append((y, x))
     return out
@@ -51,33 +51,57 @@ def codes_for_line(block, line):
 
 
 def extract_nlq(pts):
-    """-> {code: set((col,row))}  col = px column inside the cell, row = 2.96 px lines"""
-    P = 2.96
+    """NLQ dots sit on a fine lattice: 27 columns per cell (2.0422 px) and rows
+    of 1/216 inch (65/33 px); pass 2 is shifted by 1 column / 2 rows."""
+    UX = CELL / 27.0
+    UY = 65.0 / 33.0
+    # global vertical phase: minimise the distance of all dots to the row lattice
+    pts = [(y, x) for y, x in pts]
+    best = None
+    for k in range(0, 200):
+        y0 = k * UY / 200.0
+        res = 0.0
+        for y, x in pts:
+            f = ((y - y0) / UY) % 1.0
+            res += min(f, 1 - f) ** 2
+        if best is None or res < best[0]: best = (res, y0)
+    y0 = best[1]
     glyphs = {}
     for line in range(7):
         top = 14 + 65 * line
         band = [(y, x) for y, x in pts if top - 6 <= y < top + 62]
-        if not band: continue
-        ph = np.angle(np.mean([np.exp(2j * np.pi * y / P) for y, x in band])) / (2 * np.pi) * P
-        ref = round((top - ph) / P)
         for code_i, code in enumerate(codes_for_line("nlq", line)):
             if code is None: continue
             xl = X0 + CELL * code_i
             g = set()
             for y, x in band:
                 if xl - 0.5 <= x < xl + CELL - 0.5:
-                    g.add((int(round(x - xl)), int(round((y - ph) / P)) - ref))
+                    g.add((int(round((x - xl) / UX)), int(round((y - y0 - 65 * line) / UY))))
             glyphs[code] = g
     return glyphs
 
 
+def fit_lattice(xs, lo=3.90, hi=4.12):
+    """Horizontal draft lattice: the printer fires the draft wires on a grid of half a
+    character column (4 px).  Returns (pitch, phase) with the smallest residual."""
+    best = None
+    for px in np.arange(lo, hi, 0.01):
+        for ph in np.arange(0.0, px, 0.05):
+            f = (xs - ph) / px
+            r = float(np.mean((f - np.round(f)) ** 2))
+            if best is None or r < best[0]: best = (r, px, ph)
+    return best[1], best[2]
+
+
 def extract_draft(pts):
-    PX, PY = 7.86, 5.91
+    """Draft dots sit on a half-column lattice (4 px): the curves of 0 O C S 8 ...
+    use dots between the whole columns.  Rounding them to whole columns (7.86 px, as
+    before) pushed those dots onto their neighbours and left e.g. the 0 open like ( )."""
+    PY = 5.91
     glyphs = {}
-    # phase of the lattice: the 'H' stems etc. -> use global circular mean
+    xs = np.array([x - (X0 + CELL * int((x - X0) // CELL)) for y, x in pts if y > 520])
+    PX, phx = fit_lattice(xs)
     ys = [y for y, x in pts if y > 520]
-    xs = [x for y, x in pts if y > 520]
-    phx = np.angle(np.mean([np.exp(2j * np.pi * (x - X0) / PX) for x in xs])) / (2 * np.pi) * PX
     phy = np.angle(np.mean([np.exp(2j * np.pi * y / PY) for y in ys])) / (2 * np.pi) * PY
     for line in range(15):
         top = 529 + 65 * line
@@ -162,14 +186,15 @@ def preview(f, path, text_codes):
 
 def main():
     img = Image.open(PNG)
-    pts = dots(img)
+    pts = dots(img, 1.2)
     nlq = extract_nlq([q for q in pts if q[0] < 480])
+    pts = dots(img, 2.6)
     drf = extract_draft([q for q in pts if q[0] >= 500])
     drf = {c: g for c, g in drf.items() if c < 0x7F or c in GERMAN}   # CPC symbols are not Latin-1
     # 1 px column = 1/551 in, cell = 55 px = 10 cpi;  rows 1/144 in;  dot 3.6 px
-    f_nlq = build(nlq, "nlq401_nlq", 0, 144, 55, 17, 0)
-    # draft: lattice columns, cell = 7 dots; rows 1/ (5.91px)
-    f_drf = build(drf, "nlq401_draft", 0, 72, 7, 22, 0)
+    f_nlq = build(nlq, "nlq401_nlq", 0, 216, 27, 17, 0)
+    # draft: half-column lattice, cell = 14 half columns (= 7 dots); rows 1/ (5.91px)
+    f_drf = build(drf, "nlq401_draft", 0, 72, 14, 22, 0)   # cell = 14 half columns
     for f in (f_nlq, f_drf): emit(f)
     s = "Das Schneider NLQ401 druckt Hamburgefonts: gjpqy"
     preview(f_nlq, "/tmp/cmp/prev_nlq.png", [ord(c) for c in s])
