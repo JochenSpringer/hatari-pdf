@@ -221,7 +221,13 @@ static void form_feed(escp *s, pe_engine *e) {
 static void feed(escp *s, pe_engine *e, int32_t units) {
   e->y += units;
   if (e->y < 0) e->y = 0;
-  if (e->y + cell_height(s) > s->form_length - s->skip_bottom) form_feed(s, e);
+  /* Fanfold: the form ends at the perforation.  A cut sheet is the whole
+   * A4 page; 1st Word ends every page with an explicit FF, and its page
+   * length (ESC C) is often a line or two shorter than what it prints. */
+  {
+    int32_t limit = e->cfg.continuous ? s->form_length : s->printable_height;
+    if (e->y + cell_height(s) > limit - s->skip_bottom) form_feed(s, e);
+  }
 }
 
 /* Form length (ESC C).  On fanfold paper the PDF page is exactly one form:
@@ -584,7 +590,9 @@ void escp_reset(escp *s, pe_engine *e) {
     e->cfg.page_height = e->cfg.base_page_height; /* back to the 12 inch form */
   }
   s->printable_width = e->cfg.page_width - 2 * e->cfg.left_offset;
-  s->printable_height = e->cfg.page_height - 2 * e->cfg.top_offset;
+  /* a PDF page has no bottom margin: let the form use the whole sheet below
+   * the top margin (1st Word fills A4 sheets down to the last line) */
+  s->printable_height = e->cfg.page_height - e->cfg.top_offset;
   s->left_margin = 0;
   s->right_margin = s->printable_width;
   s->form_length = s->printable_height;

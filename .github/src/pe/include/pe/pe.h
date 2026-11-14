@@ -29,8 +29,6 @@ typedef struct {
   int32_t left_offset, top_offset; /* unprintable border                */
   int continuous;                  /* fanfold paper                     */
   int greenbar;                    /* green/white reading bars (Lesestreifen) */
-  int32_t text_dy;                 /* set by pe_job_create from the driver's fanfold_dy:
-                                      printed dots sit this much lower than the line grid */
   int compress;                    /* Flate compress page streams       */
 } pe_config;
 

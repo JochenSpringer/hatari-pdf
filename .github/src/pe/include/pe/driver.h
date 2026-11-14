@@ -35,8 +35,6 @@ typedef struct pe_driver {
   void (*reset)(void *state, pe_engine *e);   /* ESC @ / hardware INIT */
   void (*byte)(void *state, pe_engine *e, uint8_t b);
   void (*eoj)(void *state, pe_engine *e);     /* end of job            */
-  int32_t fanfold_dy;      /* fanfold paper: print this much lower than the line
-                              grid (units, 85 = 1 mm); 0 = none            */
 } pe_driver;
 
 /* Built in drivers. */

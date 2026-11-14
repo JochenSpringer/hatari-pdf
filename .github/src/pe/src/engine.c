@@ -65,7 +65,7 @@ static void end_text(pe_engine *e) {
 void pe_engine_dot(pe_engine *e, int32_t x, int32_t y, int32_t d) {
   if (d <= 0) return;
   int32_t X = pt100(e->cfg.left_offset + x);
-  int32_t Y = page_h100(e) - pt100(e->cfg.top_offset + e->cfg.text_dy + y);
+  int32_t Y = page_h100(e) - pt100(e->cfg.top_offset + y);
   char a[32], b[32], line[96];
   if (!e->in_text) {
     puts_(e, "BT\n");
@@ -104,7 +104,7 @@ void pe_engine_hrule(pe_engine *e, int32_t x0, int32_t x1, int32_t y,
   int32_t X = pt100(e->cfg.left_offset + x0);
   int32_t W = pt100(x1 - x0) + pt100(th);
   int32_t H = pt100(th);
-  int32_t Y = page_h100(e) - pt100(e->cfg.top_offset + e->cfg.text_dy + y) - H / 2;
+  int32_t Y = page_h100(e) - pt100(e->cfg.top_offset + y) - H / 2;
   char a[24], b[24], c[24], d[24], line[128];
   pdf_fmt100(a, X - H / 2);
   pdf_fmt100(b, Y);
@@ -239,9 +239,6 @@ pe_job *pe_job_create(const pe_driver *drv, const pe_config *cfg,
   if (!j) return NULL;
   j->drv = drv;
   j->e.cfg = *cfg;
-  /* fanfold only: some printers print their lines lower on the paper grid than the
-   * others (driver's fanfold_dy); only the dots move, line feeds and bars keep the grid */
-  j->e.cfg.text_dy = cfg->continuous ? drv->fanfold_dy : 0;
   j->e.pdf = pdf_create(path, cfg->compress);
   j->state = calloc(1, drv->state_size);
   if (!j->e.pdf || !j->state) {

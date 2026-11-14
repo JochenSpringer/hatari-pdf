@@ -15,11 +15,6 @@
 #include <zlib.h>
 #endif
 
-/* Name des Emulators in den PDF-Eigenschaften; jedes Projekt setzt sein eigenes -DPE_CREATOR="..." (Hatari: Standardwert) */
-#ifndef PE_CREATOR
-#define PE_CREATOR "Hatari PDF printer emulation"
-#endif
-
 struct pe_pdf {
   char *path;
   FILE *fp;
@@ -86,8 +81,8 @@ static int open_file(struct pe_pdf *p) {
         "/FirstChar 97 /LastChar 97 /Widths [0] >>\nendobj\n", p->fp);
   /* 5: info */
   if (!begin_obj(p, 5)) return 0;
-  fputs("<< /Title (Printer output) /Creator (" PE_CREATOR ") "
-        "/Producer (pe printer engine 2.5 2026-11-10, NEC Pinwriter P6, FS-E) >>\nendobj\n", p->fp);
+  fputs("<< /Title (Printer output) /Creator (Hatari PDF printer emulation) "
+        "/Producer (pe printer engine 2.4 2026-11-02, NEC Pinwriter P6, FS-E) >>\nendobj\n", p->fp);
   p->tail = ftell(p->fp);
   return 1;
 }

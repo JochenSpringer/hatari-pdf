@@ -61,14 +61,11 @@ jobs:
           heal escp.c        lf_after_cr             src/pe/src/drivers/escp.c
           heal escp.h        default_intl                  src/pe/src/drivers/escp.h
           heal font.h        "uint8_t dot"           src/pe/include/pe/font.h
-          heal driver.h      fanfold_dy              src/pe/include/pe/driver.h
+          heal driver.h      pe_driver_nlq401d          src/pe/include/pe/driver.h
           heal registry.c    pe_driver_nlq401d          src/pe/src/registry.c
-          heal nlq401.c      fanfold_dy              src/pe/src/drivers/nlq401.c
-          heal font_nlq401_draft.c "9, 13, 14, 6"    src/pe/src/fonts/font_nlq401_draft.c
-          heal pngfont.py    fit_lattice             tools/pngfont.py
-          heal engine.c      text_dy                 src/pe/src/engine.c
-          heal pe.h          text_dy                 src/pe/include/pe/pe.h
-          heal pdf.c         "pe printer engine 2.5" src/pe/src/pdf.c
+          heal engine.c      base_page_height        src/pe/src/engine.c
+          heal pe.h          base_page_height        src/pe/include/pe/pe.h
+          heal pdf.c         "pe printer engine 1.8" src/pe/src/pdf.c
           heal printer_pdf.c "green bars"            src/printer_pdf.c
           heal CMakeLists.txt PE_SOURCES             src/pe/CMakeLists.txt
           heal printer.c       nPdfIdleCount          src/printer.c

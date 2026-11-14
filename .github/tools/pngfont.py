@@ -81,27 +81,13 @@ def extract_nlq(pts):
     return glyphs
 
 
-def fit_lattice(xs, lo=3.90, hi=4.12):
-    """Horizontal draft lattice: the printer fires the draft wires on a grid of half a
-    character column (4 px).  Returns (pitch, phase) with the smallest residual."""
-    best = None
-    for px in np.arange(lo, hi, 0.01):
-        for ph in np.arange(0.0, px, 0.05):
-            f = (xs - ph) / px
-            r = float(np.mean((f - np.round(f)) ** 2))
-            if best is None or r < best[0]: best = (r, px, ph)
-    return best[1], best[2]
-
-
 def extract_draft(pts):
-    """Draft dots sit on a half-column lattice (4 px): the curves of 0 O C S 8 ...
-    use dots between the whole columns.  Rounding them to whole columns (7.86 px, as
-    before) pushed those dots onto their neighbours and left e.g. the 0 open like ( )."""
-    PY = 5.91
+    PX, PY = 7.86, 5.91
     glyphs = {}
-    xs = np.array([x - (X0 + CELL * int((x - X0) // CELL)) for y, x in pts if y > 520])
-    PX, phx = fit_lattice(xs)
+    # phase of the lattice: the 'H' stems etc. -> use global circular mean
     ys = [y for y, x in pts if y > 520]
+    xs = [x for y, x in pts if y > 520]
+    phx = np.angle(np.mean([np.exp(2j * np.pi * (x - X0) / PX) for x in xs])) / (2 * np.pi) * PX
     phy = np.angle(np.mean([np.exp(2j * np.pi * y / PY) for y in ys])) / (2 * np.pi) * PY
     for line in range(15):
         top = 529 + 65 * line
@@ -193,8 +179,8 @@ def main():
     drf = {c: g for c, g in drf.items() if c < 0x7F or c in GERMAN}   # CPC symbols are not Latin-1
     # 1 px column = 1/551 in, cell = 55 px = 10 cpi;  rows 1/144 in;  dot 3.6 px
     f_nlq = build(nlq, "nlq401_nlq", 0, 216, 27, 17, 0)
-    # draft: half-column lattice, cell = 14 half columns (= 7 dots); rows 1/ (5.91px)
-    f_drf = build(drf, "nlq401_draft", 0, 72, 14, 22, 0)   # cell = 14 half columns
+    # draft: lattice columns, cell = 7 dots; rows 1/ (5.91px)
+    f_drf = build(drf, "nlq401_draft", 0, 72, 7, 22, 0)
     for f in (f_nlq, f_drf): emit(f)
     s = "Das Schneider NLQ401 druckt Hamburgefonts: gjpqy"
     preview(f_nlq, "/tmp/cmp/prev_nlq.png", [ord(c) for c in s])
