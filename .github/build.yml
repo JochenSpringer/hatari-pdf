@@ -58,14 +58,17 @@ jobs:
             if [ -n "$cand" ]; then echo "VERSCHOBEN $target <- $cand"; mkdir -p "$(dirname "$target")"; cp "$cand" "$target"
             else echo "FEHLT     $target"; missing=1; fi
           }
-          heal escp.c        lf_after_cr             src/pe/src/drivers/escp.c
+          heal escp.c        vunit                               src/pe/src/drivers/escp.c
           heal escp.h        default_intl                  src/pe/src/drivers/escp.h
           heal font.h        "uint8_t dot"           src/pe/include/pe/font.h
-          heal driver.h      pe_driver_nlq401d          src/pe/include/pe/driver.h
+          heal driver.h      fanfold_dy              src/pe/include/pe/driver.h
           heal registry.c    pe_driver_nlq401d          src/pe/src/registry.c
-          heal engine.c      base_page_height        src/pe/src/engine.c
-          heal pe.h          base_page_height        src/pe/include/pe/pe.h
-          heal pdf.c         "pe printer engine 1.8" src/pe/src/pdf.c
+          heal nlq401.c      fanfold_dy              src/pe/src/drivers/nlq401.c
+          heal font_nlq401_draft.c "9, 13, 14, 6"    src/pe/src/fonts/font_nlq401_draft.c
+          heal pngfont.py    fit_lattice             tools/pngfont.py
+          heal engine.c      text_dy                 src/pe/src/engine.c
+          heal pe.h          text_dy                 src/pe/include/pe/pe.h
+          heal pdf.c         "pe printer engine 2.6" src/pe/src/pdf.c
           heal printer_pdf.c "green bars"            src/printer_pdf.c
           heal CMakeLists.txt PE_SOURCES             src/pe/CMakeLists.txt
           heal printer.c       nPdfIdleCount          src/printer.c
@@ -77,6 +80,10 @@ jobs:
           heal configuration.c bPrinterAlert          src/configuration.c
           heal configuration.h bPrinterAlert          src/includes/configuration.h
           heal dlgDevice.c     PDFDLG_ALERT           src/gui-sdl/dlgDevice.c
+          heal keymap_pc.c     KeymapPc_KeyDown       src/keymap_pc.c
+          heal keymap_pc.h     KeymapPc_KeyUp         src/includes/keymap_pc.h
+          heal keymap_pc_cfg.h KEYMAPPC_HAVE_ROMSCAN  src/includes/keymap_pc_cfg.h
+          heal patch_keymap.py patch_config           tools/patch_keymap.py
           for f in eplq lq800 fx80 kxp2023 lc24 nlq401; do need src/pe/src/drivers/$f.c; done
           need src/pe/include/pe/rom_fonts.h
           for f in fx80_courier kxp_boldps kxp_courier kxp_draft kxp_prestige kxp_script lc24_courier lc24_courier_italic lc24_draft lc24_draft_bold lc24_draft_italic lc24_orator lc24_prestige lc24_prestige_italic lc24_script lq800_draft lq800_roman lq800_sans nlq401_draft nlq401_nlq; do need src/pe/src/fonts/font_$f.c; done
@@ -94,13 +101,15 @@ jobs:
           cmake --version
       - name: 5 - PDF-Drucker in Hatari einbauen
         run: cp -rv src/. hatari-src/src/
-      - name: 5b - Versionsangabe im About-Dialog (2.7.2.4)
+      - name: 5a - PC-Tastaturbelegung einhaengen (keymap.c, Konfiguration, CMake)
+        run: python3 tools/patch_keymap.py hatari-src
+      - name: 5b - Versionsangabe im About-Dialog (2.7.2.7)
         run: |
           python3 - <<'PYEOF'
           import re
           p = "hatari-src/src/gui-sdl/dlgAbout.c"
           s = open(p, encoding="latin-1").read()
-          new = '"Hatari v2.7.2.4"'
+          new = '"Hatari v2.7.2.7"'
           n = 0
           lines = s.split("\n")
           for i, l in enumerate(lines):
@@ -137,6 +146,7 @@ jobs:
           cp hatari-src/build/src/hatari.exe dist/
           cp hatari-src/gpl.txt hatari-src/readme.txt dist/
           cp -r hatari-src/doc dist/doc
+          if [ -d doku ]; then cp -r doku dist/doku; fi
           ldd dist/hatari.exe | awk '/\/mingw64\// {print $3}' | sort -u | while read -r dll; do cp -v "$dll" dist/; done
           ls -la dist
       - name: 10 - Ergebnis bereitstellen
