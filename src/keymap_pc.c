@@ -1,5 +1,5 @@
 /*
-  Hatari - keymap_pc.c  (hATARI 2.7.2.5)
+  Hatari - keymap_pc.c  (hATARI 2.8)
 
   This file is distributed under the GNU General Public License, version 2
   or at your option any later version. Read the file gpl.txt for details.
@@ -7,7 +7,9 @@
   PC-Tastaturbelegung
   -------------------
   Zuschaltbare Funktion (ConfigureParams.Keyboard.bPcLayoutMapping, Umschalten
-  im laufenden Betrieb mit der Taste "Rollen"/Scroll Lock).
+  im laufenden Betrieb mit der Taste "Rollen"/Scroll Lock).  Solange sie aktiv
+  ist, sind die AltGr-Kuerzel von Hatari abgeschaltet (AltGr liefert die
+  PC-Zeichen); Hatari-Kuerzel gibt es dann mit der Windows-Taste.
 
   Ist sie aktiv, wird fuer jede Zeichentaste der PC-Tastatur das erzeugte
   Zeichen bestimmt (Shift, AltGr, Feststelltaste beruecksichtigt) und die
@@ -46,6 +48,20 @@ const char KeymapPc_fileid[] = "Hatari keymap_pc.c";
 #ifdef _WIN32
 #include <windows.h>
 #endif
+
+/* Diagnose: Umgebungsvariable HATARI_PCKEYS_DEBUG=1 setzen, dann steht fuer jede
+ * Taste im Hatari-Protokoll (Konsole bzw. stderr.txt), was damit geschieht. */
+static int dbgState = -1;
+static bool DbgOn(void)
+{
+	if (dbgState < 0)
+	{
+		const char *e = getenv("HATARI_PCKEYS_DEBUG");
+		dbgState = (e && *e && *e != '0') ? 1 : 0;
+	}
+	return dbgState == 1;
+}
+#define DBG(...) do { if (DbgOn()) Log_Printf(LOG_WARN, "PCKEYS: " __VA_ARGS__); } while (0)
 
 /* ------------------------------------------------------------------ */
 /* Atari-Scancodes der Umschalttasten                                 */
@@ -529,6 +545,7 @@ static uint32_t PcChar(int sc, bool shift, bool altgr, bool caps)
 /* Tasten ohne Zeichen: feste Zuordnung PC -> Atari                   */
 /* ------------------------------------------------------------------ */
 static uint8_t specialSt[PC_NUMSC];
+static bool specialShift[PC_NUMSC];     /* Atari-Shift erzwingen */
 static bool specialInit;
 
 static void InitSpecial(void)
@@ -538,15 +555,24 @@ static void InitSpecial(void)
 		return;
 	specialInit = true;
 	memset(specialSt, 0, sizeof(specialSt));
+	memset(specialShift, 0, sizeof(specialShift));
 	specialSt[SDL_SCANCODE_ESCAPE]    = 0x01;
 	specialSt[SDL_SCANCODE_BACKSPACE] = 0x0E;
 	specialSt[SDL_SCANCODE_TAB]       = 0x0F;
 	specialSt[SDL_SCANCODE_RETURN]    = 0x1C;
 	specialSt[SDL_SCANCODE_DELETE]    = 0x53;
 	specialSt[SDL_SCANCODE_INSERT]    = 0x52;
-	specialSt[SDL_SCANCODE_HOME]      = 0x47;   /* Clr/Home */
-	specialSt[SDL_SCANCODE_PAGEUP]    = 0x62;   /* Help */
-	specialSt[SDL_SCANCODE_PAGEDOWN]  = 0x61;   /* Undo */
+	/* Mit "Rollen" aktiv gelten die typischen PC-Funktionen:
+	 * Pos1 = Home -> Clr/Home; Bild hoch/runter = seitenweise blaettern
+	 * -> Shift + Cursor hoch/runter.  Help und Undo liegen dann auf
+	 * Druck und Ende. */
+	specialSt[SDL_SCANCODE_HOME]        = 0x47;   /* Clr/Home */
+	specialSt[SDL_SCANCODE_PAGEUP]      = 0x48;   /* Shift + Cursor hoch */
+	specialShift[SDL_SCANCODE_PAGEUP]   = true;
+	specialSt[SDL_SCANCODE_PAGEDOWN]    = 0x50;   /* Shift + Cursor runter */
+	specialShift[SDL_SCANCODE_PAGEDOWN] = true;
+	specialSt[SDL_SCANCODE_PRINTSCREEN] = 0x62;   /* Help */
+	specialSt[SDL_SCANCODE_END]         = 0x61;   /* Undo */
 	specialSt[SDL_SCANCODE_UP]        = 0x48;
 	specialSt[SDL_SCANCODE_DOWN]      = 0x50;
 	specialSt[SDL_SCANCODE_LEFT]      = 0x4B;
@@ -718,6 +744,31 @@ static void SendNumpadCode(int code)
 	SetMods(Baseline());        /* Alt loslassen: TOS fuegt jetzt das Zeichen ein */
 }
 
+/* Mit "Rollen" aus: Pos1 / Bild hoch / Bild runter fuer die Atari-Tasten
+ * Clr/Home, Help, Undo (alles andere erledigt Hatari wie bisher). */
+static uint8_t OffModeKey(int sc)
+{
+	switch (sc)
+	{
+	case SDL_SCANCODE_HOME:     return 0x47;   /* Clr/Home */
+	case SDL_SCANCODE_PAGEUP:   return 0x62;   /* Help */
+	case SDL_SCANCODE_PAGEDOWN: return 0x61;   /* Undo */
+	default:                    return 0;
+	}
+}
+
+/* Wird am Anfang von Hatari's ShortCut_CheckKeys() aufgerufen (durch
+ * tools/patch_keymap.py eingehaengt).  Mit PC-Tastaturbelegung: AltGr loest
+ * keine Hatari-Kuerzel aus; die Windows-Taste ersetzt AltGr. */
+int KeymapPc_ShortcutModifier(int modkey)
+{
+	if (!ConfigureParams.Keyboard.bPcLayoutMapping)
+		return modkey;
+	if (modkey & (KMOD_LGUI | KMOD_RGUI))
+		return (modkey & ~(KMOD_LGUI | KMOD_RGUI)) | KMOD_RALT;
+	return modkey & ~(KMOD_RALT | KMOD_MODE);
+}
+
 /* ------------------------------------------------------------------ */
 /* Einstiegspunkte                                                    */
 /* ------------------------------------------------------------------ */
@@ -742,11 +793,27 @@ bool KeymapPc_KeyDown(const SDL_Keysym *ks)
 			ConfigureParams.Keyboard.bPcLayoutMapping = !ConfigureParams.Keyboard.bPcLayoutMapping;
 			CheckEnabled();
 			Notify(ConfigureParams.Keyboard.bPcLayoutMapping);
+			DBG("Rollen: jetzt %s\n", ConfigureParams.Keyboard.bPcLayoutMapping ? "ein" : "aus");
 		}
 		return true;
 	}
 	if (!en)
+	{
+		uint8_t st = OffModeKey(sc);
+		if (st && !(ks->mod & (KMOD_LGUI | KMOD_RGUI)) && !IsJoystickKey((int)ks->sym))
+		{
+			DBG("aus: sc=%d -> Atari 0x%02X\n", sc, st);
+			if (!held[sc].down)
+			{
+				SendKey(st, true);
+				held[sc].down = held[sc].valid = true;
+				held[sc].st = st;
+			}
+			return true;
+		}
+		DBG("aus: sc=%d mod=0x%x -> Hatari\n", sc, (unsigned)ks->mod);
 		return false;
+	}
 
 	InitSpecial();
 
@@ -780,7 +847,8 @@ bool KeymapPc_KeyDown(const SDL_Keysym *ks)
 	/* Tasten mit fester Atari-Zuordnung */
 	if (specialSt[sc])
 	{
-		SetMods(Baseline());
+		DBG("ein: sc=%d -> Atari 0x%02X%s\n", sc, specialSt[sc], specialShift[sc] ? " +Shift" : "");
+		SetMods((uint8_t)(Baseline() | (specialShift[sc] ? M_SHIFT : 0)));
 		SendKey(specialSt[sc], true);
 		held[sc].down = held[sc].valid = true;
 		held[sc].st = specialSt[sc];
@@ -790,43 +858,33 @@ bool KeymapPc_KeyDown(const SDL_Keysym *ks)
 	/* Zeichentasten */
 	if (!IsCharKey(sc))
 	{
+		DBG("ein: sc=%d (keine Zeichentaste) -> Hatari\n", sc);
 		held[sc].passed = true;
 		return false;                     /* z.B. F11, F12, Pause: Hatari-Standard */
-	}
-	if (altgr && sc == SDL_SCANCODE_M)    /* AltGr+M = Maus fangen (Hatari) */
-	{
-		held[sc].passed = true;
-		return false;
 	}
 	cp = PcChar(sc, shift, altgr, caps);
 	if (cp == 0)
 	{
-		if (altgr)
-		{
-			held[sc].passed = true;
-			return false;                 /* AltGr-Shortcuts von Hatari */
-		}
-		held[sc].down = true;             /* unbelegt */
+		DBG("ein: sc=%d shift=%d altgr=%d -> kein PC-Zeichen, unbelegt\n", sc, shift, altgr);
+		held[sc].down = true;             /* unbelegt (auch AltGr: keine Hatari-Kuerzel) */
 		return true;
 	}
 	a = LookupAtari(cp);
 	if (a.kind == A_NONE)
 	{
-		if (altgr)
-		{
-			held[sc].passed = true;
-			return false;
-		}
-		held[sc].down = true;             /* gibt es auf dem Atari nicht */
+		DBG("ein: sc=%d U+%04X -> gibt es auf dem Atari nicht\n", sc, (unsigned)cp);
+		held[sc].down = true;
 		return true;
 	}
 	if (a.kind == A_NUMPAD)
 	{
+		DBG("ein: sc=%d U+%04X -> Alt+Ziffernblock %d\n", sc, (unsigned)cp, a.code);
 		held[sc].down = true;
 		if (!ctrl && !alt)
 			SendNumpadCode(a.code);
 		return true;
 	}
+	DBG("ein: sc=%d U+%04X -> Atari 0x%02X%s\n", sc, (unsigned)cp, a.sc, a.shift ? " +Shift" : "");
 	SetMods((uint8_t)((a.shift ? M_SHIFT : 0) | (ctrl ? M_CTRL : 0) | (alt ? M_ALT : 0)));
 	SendKey(a.sc, true);
 	held[sc].down = held[sc].valid = true;
@@ -850,7 +908,16 @@ bool KeymapPc_KeyUp(const SDL_Keysym *ks)
 		return used || en;
 	}
 	if (!en)
+	{
+		if (held[sc].down)                /* Pos1/Bild hoch/Bild runter im Aus-Modus */
+		{
+			if (held[sc].valid)
+				SendKey(held[sc].st, false);
+			held[sc].down = held[sc].valid = false;
+			return true;
+		}
 		return false;
+	}
 
 	if (held[sc].passed)
 	{

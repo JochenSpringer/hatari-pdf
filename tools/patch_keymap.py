@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-hATARI 2.7.2.7 - PC-Tastaturbelegung in die Hatari-Quellen einhaengen.
+hATARI 2.8 - PC-Tastaturbelegung in die Hatari-Quellen einhaengen.
 
 Aufruf:  python3 tools/patch_keymap.py <hatari-src>
 
@@ -12,6 +12,12 @@ Aufruf:  python3 tools/patch_keymap.py <hatari-src>
    Aufruf von KeymapPc_KeyDown()/KeymapPc_KeyUp() ein.
 3. Ergaenzt configuration.h/.c um die Einstellungen bPcLayoutMapping und
    nPcLayoutSource und nimmt keymap_pc.c in src/CMakeLists.txt auf.
+4. Haengt in shortcut.c am Anfang von ShortCut_CheckKeys() den Aufruf von
+   KeymapPc_ShortcutModifier() ein: Mit aktiver PC-Tastaturbelegung loesen
+   AltGr-Kombinationen keine Hatari-Kuerzel mehr aus, die Windows-Taste
+   uebernimmt deren Rolle.
+5. Schreibt Diagnosezeilen ins Bauprotokoll (wo Hatari Tasten und AltGr
+   behandelt).
 Alle Eingriffe sind wiederholbar (bereits Eingehaengtes wird erkannt) und
 brechen mit Fehlermeldung ab, wenn die Einhaengestelle nicht gefunden wird.
 Die Zieldateien werden erst NACH dem Kopieren der Projektdateien (Schritt 5)
@@ -97,6 +103,75 @@ def patch_cmake(root):
     print("patch_keymap: CMakeLists.txt erweitert")
 
 
+def patch_shortcut(root):
+    """ShortCut_CheckKeys(): AltGr-Kuerzel bei aktiver PC-Tastaturbelegung sperren."""
+    p = os.path.join(root, "src", "shortcut.c")
+    if not os.path.isfile(p):
+        print("patch_keymap: WARNUNG shortcut.c nicht gefunden - AltGr-Kuerzel werden nicht gesperrt")
+        return
+    t = read(p)
+    if "KeymapPc_ShortcutModifier" in t:
+        print("patch_keymap: shortcut.c ist bereits eingehaengt")
+        return
+    m = re.search(r"(^|\n)((?:static\s+)?\w+\s+ShortCut_CheckKeys\s*\(([^)]*)\)\s*\{)", t)
+    if not m:
+        print("patch_keymap: WARNUNG ShortCut_CheckKeys() nicht gefunden - AltGr-Kuerzel werden nicht gesperrt")
+        return
+    params = [x.strip() for x in m.group(3).split(",")]
+    if len(params) < 2 or "*" in params[0]:
+        print("patch_keymap: WARNUNG Parameter von ShortCut_CheckKeys() unerwartet: " + m.group(3))
+        return
+    names = re.findall(r"[A-Za-z_]\w*", params[0])
+    if not names:
+        print("patch_keymap: WARNUNG Parametername von ShortCut_CheckKeys() nicht erkennbar")
+        return
+    arg = names[-1]
+    ins = "\n\t%s = KeymapPc_ShortcutModifier(%s);\n" % (arg, arg)
+    t = t[:m.end()] + ins + t[m.end():]
+    last = None
+    for last in re.finditer(r"#include[^\n]*\n", t):
+        pass
+    if last is None:
+        print("patch_keymap: WARNUNG keine #include-Zeilen in shortcut.c")
+        return
+    t = t[:last.end()] + '#include "keymap_pc.h"\n' + t[last.end():]
+    write(p, t)
+    print("patch_keymap: shortcut.c eingehaengt (Parameter '%s')" % arg)
+
+
+def diagnose(root):
+    """Zeigt im Bauprotokoll, wo Hatari Tasten und AltGr behandelt."""
+    pats = [("AltGr/KMOD_RALT/KMOD_MODE", re.compile(r"KMOD_RALT|KMOD_MODE")),
+            ("Aufrufe Keymap_KeyDown/Up", re.compile(r"\bKeymap_Key(Down|Up)\s*\(")),
+            ("Aufrufe ShortCut_CheckKeys", re.compile(r"\bShortCut_CheckKeys\s*\("))]
+    src = os.path.join(root, "src")
+    files = []
+    for d, _, names in os.walk(src):
+        for n in names:
+            if n.endswith(".c"):
+                files.append(os.path.join(d, n))
+    files.sort()
+    print("patch_keymap: --- Diagnose -------------------------------------------")
+    for title, rx in pats:
+        print("patch_keymap: [%s]" % title)
+        cnt = 0
+        for f in files:
+            if os.path.basename(f) in ("keymap_pc.c",):
+                continue
+            try:
+                lines = read(f).split("\n")
+            except OSError:
+                continue
+            for i, l in enumerate(lines, 1):
+                if rx.search(l):
+                    cnt += 1
+                    if cnt <= 25:
+                        print("patch_keymap:   %s:%d: %s" % (os.path.relpath(f, root), i, l.strip()[:110]))
+        if cnt == 0:
+            print("patch_keymap:   (keine Treffer)")
+    print("patch_keymap: --- Ende Diagnose --------------------------------------")
+
+
 def main():
     if len(sys.argv) != 2:
         fail("Aufruf: patch_keymap.py <hatari-src>")
@@ -123,6 +198,8 @@ def main():
 
     patch_config(root)
     patch_cmake(root)
+    patch_shortcut(root)
+    diagnose(root)
 
     # --- 2. keymap.c einhaengen --------------------------------------------
     src = read(keymap)

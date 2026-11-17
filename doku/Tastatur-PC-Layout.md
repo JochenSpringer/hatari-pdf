@@ -1,117 +1,135 @@
-# PC-Tastaturbelegung für den Atari (hATARI 2.7.2.7)
+# PC-Tastaturbelegung für den Atari (hATARI 2.8)
 
-Zuschaltbare Funktion: Man tippt am PC, und der Atari bekommt genau die
-Tastenfolge, die auf der Atari-Tastatur das gleiche Zeichen erzeugt.
-Referenz ist der Atari – Zeichen, die es dort nicht gibt, bleiben unbelegt.
+Zuschaltbare Funktion: Man tippt am PC, und der Atari bekommt genau die Tastenfolge, die auf
+der Atari-Tastatur das gleiche Zeichen erzeugt. Referenz ist der Atari – Zeichen, die es dort
+nicht gibt, bleiben unbelegt.
 
-## Ein- und Ausschalten
+**Ein-/Ausschalten:** Taste **Rollen** (Scroll Lock). Vorgabe beim Start: aus
+(`hatari.cfg`, Abschnitt `[Keyboard]`: `bPcLayoutMapping`; `nPcLayoutSource` = 0 Betriebssystem
+bzw. Deutsch, 1 Deutsch fest).
 
-| Weg | Wirkung |
+**Wirkungsweise:** Aus der gedrückten PC-Taste samt Shift, AltGr und Feststelltaste wird das
+Zeichen bestimmt (unter Windows laut eingestellter Tastaturbelegung). In der Atari-Tastentabelle
+des geladenen TOS-Images (sonst eingebaute deutsche Tabelle) wird die Taste gesucht, die dieses
+Zeichen erzeugt; Shift wird bei Bedarf automatisch gesetzt. Zeichen ohne eigene Atari-Taste
+kommen über Alternate + Ziffernblock.
+
+## Alle Tastenkombinationen
+
+### A. „Rollen“ aus (Hatari wie bisher, plus drei Atari-Tasten)
+
+| PC-Taste | Atari |
 |---|---|
-| Taste **Rollen** (Scroll Lock) | schaltet im laufenden Betrieb um, Meldung in der Statusleiste und im Protokoll |
-| `hatari.cfg`, Abschnitt `[Keyboard]`: `bPcLayoutMapping = TRUE` | Funktion beim Start aktiv |
-| `hatari.cfg`: `nPcLayoutSource = 0` | Zeichen der PC-Tastatur laut Betriebssystem (Windows), sonst Deutsch |
-| `hatari.cfg`: `nPcLayoutSource = 1` | immer die eingebaute deutsche PC-Belegung |
+| **Pos1** | Clr/Home |
+| **Bild hoch** | Help |
+| **Bild runter** | Undo |
+| alle übrigen Tasten | Hatari-Standard (Tastaturzuordnung aus dem Setup) |
+| AltGr + Taste | Hatari-eigene Kürzel (Beenden, Vollbild, Reset …) |
 
-Vorgabe: **aus**. Dann verhält sich hATARI wie bisher. Die Einstellung wird
-mit „Save config“ bzw. beim Speichern der Konfiguration gesichert.
-Ein Kontrollkästchen im Setup-Dialog „Keyboard“ gibt es noch nicht (siehe
-„Offen“).
+Pos1/Bild hoch/Bild runter gelten in diesem Modus auch zusammen mit Shift
+(Shift + Pos1 = Clr). Mit gedrückter Windows-Taste gehen sie an Hatari.
 
-## Was passiert beim Tippen
+### B. „Rollen“ ein (PC-Tastaturbelegung)
 
-1. Aus der gedrückten PC-Taste samt Shift, AltGr und Feststelltaste wird das
-   Zeichen bestimmt (unter Windows laut eingestellter Tastaturbelegung, sonst
-   deutsch).
-2. In der Atari-Tastentabelle wird die Taste gesucht, die dieses Zeichen
-   erzeugt. Shift wird bei Bedarf automatisch gedrückt oder losgelassen,
-   unabhängig vom PC. Beispiel: `#` ist am PC eine eigene Taste, am Atari
-   (deutsch) liegt es an einer anderen Stelle – es kommt trotzdem `#` an.
-3. Die Atari-Tastentabelle wird aus dem **geladenen TOS-Image** gelesen
-   (TOS 1.x/2.x/3.x/4.x, EmuTOS). Findet sich dort keine Tabelle, gilt eine
-   eingebaute Tabelle der deutschen Atari-Tastatur. Im Protokoll steht, welche
-   Quelle benutzt wurde („PC-Tastaturbelegung: Atari-Tastentabelle aus …“).
-4. Zeichen, die der Atari-Zeichensatz kennt, aber keine eigene Taste haben,
-   werden mit der TOS-Eingabe **Alternate + Ziffernblock** erzeugt (ASCII-Code
-   auf dem Ziffernblock tippen, Alternate loslassen). Das betrifft am
-   deutschen PC vor allem `@ [ ] { } \ ° ² ³ ´`. Voraussetzung: TOS 1.04 oder
-   neuer (EmuTOS auch). In Programmen, die die Tastatur direkt abfragen
-   (viele Spiele), kommen dabei nur die Ziffernblock-Tasten an.
-5. Zeichen, die der Atari nicht kennt (z. B. `€`), bleiben unbelegt.
+Umschalten mit der Taste **Rollen** (Scroll Lock), Meldung „PC-Tastaturbelegung EIN/AUS“
+in der Statusleiste und im Protokoll. Die Einstellung steht auch in der `hatari.cfg`
+(`bPcLayoutMapping`).
 
-## Die vier Ebenen des Atari
+**Die vier Ebenen des Atari**
 
-| Ebene | am PC | Hinweis |
+| Ebene | PC | Ergebnis am Atari |
 |---|---|---|
-| 1 normal | Taste | |
-| 2 Shift | Shift + Taste | Shift ist für den Atari bereits im Zeichen enthalten |
-| 3 Control | Strg + Taste | Strg und Taste werden an den Atari durchgereicht |
-| 4 Alternate | **linke** Alt-Taste + Taste | Rechtes Alt = AltGr, wird für PC-Zeichen gebraucht |
+| 1 normal | Taste | Zeichen der Taste |
+| 2 Shift | Shift + Taste | Shift ist im Zeichen enthalten, wird bei Bedarf automatisch gesetzt |
+| 3 Control | Strg + Taste | Control + Atari-Taste des Zeichens (Strg+C = Control+C) |
+| 4 Alternate | **linke** Alt + Taste | Alternate + Atari-Taste des Zeichens |
+| AltGr (PC-Zeichen) | **rechtes** Alt (AltGr) + Taste | das PC-Zeichen, siehe unten |
 
-Control und Alternate gelten für das Zeichen der PC-Taste, also z. B. Strg+C
-= Control + Atari-Taste „C“, Alt+X = Alternate + Atari-Taste „X“.
+**AltGr-Zeichen der deutschen PC-Tastatur**
 
-## Tasten ohne Zeichen
+| PC | Zeichen | am Atari erzeugt durch |
+|---|---|---|
+| AltGr + Q | `@` | Alternate + Ziffernblock 6 4 |
+| AltGr + 8 | `[` | Alternate + Ziffernblock 9 1 |
+| AltGr + 9 | `]` | Alternate + Ziffernblock 9 3 |
+| AltGr + 7 | `{` | Alternate + Ziffernblock 1 2 3 |
+| AltGr + 0 | `}` | Alternate + Ziffernblock 1 2 5 |
+| AltGr + ß | `\` | Alternate + Ziffernblock 9 2 |
+| AltGr + + | `~` | Atari-Taste laut TOS-Tabelle (Taste rechts neben Ä) |
+| AltGr + < | `\|` | Atari-Taste laut TOS-Tabelle (Shift + Taste rechts neben Ä) |
+| AltGr + 2 | `²` | Alternate + Ziffernblock 2 5 3 |
+| AltGr + 3 | `³` | Alternate + Ziffernblock 2 5 4 |
+| AltGr + M | `µ` | Alternate + Ziffernblock 2 3 0 |
+| AltGr + E | `€` | gibt es am Atari nicht: unbelegt |
+
+Die Ziffernblock-Eingabe (Alternate + ASCII-Code) beherrscht das TOS ab 1.04 und EmuTOS.
+Alle anderen AltGr-Kombinationen ohne PC-Zeichen sind unbelegt – **Hatari-eigene AltGr-Kürzel
+sind abgeschaltet**, solange „Rollen“ aktiv ist.
+
+**Weitere Zeichen** (ohne AltGr): die Taste für ein Zeichen wird aus der Tastentabelle des
+geladenen TOS gesucht, z. B. `#` `'` `^` `<` `>` `;` `:` `_` `+` `*` `ß` `ä ö ü`. Dadurch
+stimmt das Zeichen, auch wenn die Taste am Atari an anderer Stelle liegt. Totzeichen (`^`, `´`, `` ` ``)
+erscheinen sofort. `°` kommt über Alternate + Ziffernblock 2 4 8, `§` über Shift + 3 (Atari-Taste 3), `´` über Alternate + Ziffernblock 1 8 6.
+
+**Tasten ohne Zeichen**
 
 | PC | Atari |
 |---|---|
 | Esc, Rück, Tab, Enter | Esc, Backspace, Tab, Return |
-| Einfg, Entf, Pos1 | Insert, Delete, Clr/Home |
-| Bild↑ | Help |
-| Bild↓ | Undo |
+| Entf, Einfg | Delete, Insert |
+| **Pos1** | Clr/Home |
+| **Bild hoch / Bild runter** | seitenweise blättern: Shift + Cursor hoch / Shift + Cursor runter |
+| **Druck** | **Help** |
+| **Ende** | **Undo** |
 | Pfeiltasten | Pfeiltasten |
-| F1 – F10 | F1 – F10 (Shift + F1…F10 = F11…F20 des Atari) |
-| Ziffernblock 0–9 , . + − * / Enter | Ziffernblock des Atari (immer als Ziffern, Num-Lock egal) |
+| F1 … F10 | F1 … F10 (Shift + F1…F10 = F11…F20 des Atari) |
+| Ziffernblock 0–9 , . + − * / Enter | Ziffernblock des Atari (immer Ziffern, Num-Lock egal) |
 | Num | Ziffernblock `(` |
 | Menütaste (neben rechter Strg) | Ziffernblock `)` |
 | Feststelltaste | wie bisher (Caps Lock des Atari) |
-| Rollen | Umschalter dieser Funktion |
+| Rollen | Umschalter der PC-Tastaturbelegung |
+| Shift / Strg / linke Alt | Shift / Control / Alternate des Atari |
 
-Unbelegt bleiben u. a. Ende, Druck, Pause, Windows-Tasten (siehe unten).
+**Hatari-Kürzel bei aktiver PC-Tastaturbelegung**
 
-## Hatari-Tastenkombinationen
+| PC | Wirkung |
+|---|---|
+| **Windows-Taste + Taste** | ersetzt AltGr + Taste: dieselben Hatari-Kürzel wie sonst mit AltGr (z. B. Windows+Q beenden) |
+| F11, F12, Pause | wie bisher direkt an Hatari |
+| Tasten der Tastatur-Joystick-Emulation | gehen an Hatari |
 
-* **Windows-Taste + Taste** und **F11/F12/Pause** gehen weiter an Hatari
-  (Vollbild, Menü, Pause …).
-* **AltGr + Taste** geht an Hatari, wenn die Kombination am PC kein Zeichen
-  erzeugt (z. B. AltGr+F, AltGr+C).
-* **AltGr + M** (Maus fangen) bleibt bewusst erhalten; das `µ` ist deshalb nicht
-  über AltGr+M erreichbar.
-* Achtung: **AltGr + Q** ergibt jetzt `@`. „Beenden“ also über Windows-Taste+Q
-  oder das Menü.
-* Tasten, die für die Joystick-Emulation per Tastatur eingestellt sind, gehen
-  weiter an Hatari.
+Die vollständige Liste der Hatari-Kürzel steht im Setup (F12 → Keyboard) und in `doc/manual.html`.
 
-## Bekannte Grenzen
+### Diagnose, falls Zeichen nicht ankommen
 
-* Totzeichen (`^`, `´`, `` ` ``) erscheinen sofort, nicht erst nach dem
-  nächsten Zeichen.
-* Mit Feststelltaste und gedrückter Shift-Taste erscheinen Großbuchstaben
-  (so verhält sich auch der Atari).
-* Enthält ein EmuTOS-Image die Tabellen vieler Länder, wird die deutsche
-  Tabelle bevorzugt.
-* Beim Loslassen von AltGr kann der Atari kurz „Control“ sehen (Windows
-  meldet AltGr als Strg+Alt). Ohne Folgen.
+Vor dem Start von hatari.exe in der Eingabeaufforderung `set HATARI_PCKEYS_DEBUG=1`
+setzen und Hatari mit `hatari.exe --log-file pckeys.log` starten. Für jede Taste steht dann in
+`pckeys.log` (Zeilen „PCKEYS: …“), ob sie ankommt und was daraus wird. Beim Bau zeigt Schritt 5a
+zusätzlich im Protokoll, an welchen Stellen Hatari AltGr und Tasten behandelt.
 
-## Selbsttest (Textfeld des Desktops, z. B. in einem Editor des Atari)
+### Bekannte Grenzen
 
-1. Rollen drücken, Meldung „PC-Tastaturbelegung EIN“ abwarten.
-2. Zeile tippen: `abcxyz äöüß ÄÖÜ 1234567890 !"§$%&/()=? +*~#'<>|^,.-;:_`
-3. Dann `@ [ ] { } \ ° ² ³` (AltGr-Zeichen).
-4. Stimmt ein Zeichen nicht, bitte notieren, welche PC-Taste welches Zeichen
-   am Atari ergibt, und die TOS-Version nennen.
+* Totzeichen erscheinen sofort, nicht erst nach dem nächsten Zeichen.
+* Mit Feststelltaste und gedrückter Shift-Taste erscheinen Großbuchstaben (wie am Atari).
+* Enthält ein EmuTOS-Image die Tabellen vieler Länder, wird die deutsche bevorzugt.
+* Beim Loslassen von AltGr kann der Atari kurz „Control“ sehen (Windows meldet AltGr als
+  Strg+Alt). Ohne Folgen.
+* Spiele, die die Tastatur direkt abfragen, sehen bei Zeichen über Alternate + Ziffernblock nur
+  Ziffernblock-Tasten.
 
-## Offen
+### Selbsttest (Textfeld im Atari)
 
-* Kontrollkästchen im Setup-Dialog „Keyboard“ (benötigt `dlgKeyboard.c`).
-* Weitere PC-Layouts ohne Windows (unter Windows wird die eingestellte
-  Belegung des Betriebssystems benutzt).
+1. Rollen drücken, „PC-Tastaturbelegung EIN“ abwarten.
+2. Tippen: `abcxyz äöüß ÄÖÜ 1234567890 !"§$%&/()=? +*~#'<>|^,.-;:_`
+3. Dann `@ [ ] { } \ ° ² ³ µ` (AltGr-Zeichen).
+4. Pos1 / Druck / Ende / Bild hoch / Bild runter ausprobieren.
+5. Stimmt ein Zeichen nicht: PC-Taste, erwartetes und erhaltenes Zeichen und TOS-Version notieren
+   (und, wenn möglich, `pckeys.log` aus der Diagnose mitschicken).
 
-## Technik
+### Technik
 
 * `src/keymap_pc.c`, `src/includes/keymap_pc.h`: eigentliche Funktion
-* `tools/patch_keymap.py`: hängt beim Bau `KeymapPc_KeyDown/Up` an den Anfang
-  von `Keymap_KeyDown/Up` in `keymap.c` und schreibt
-  `src/includes/keymap_pc_cfg.h` (TOS-Image-Auslesen nur, wenn die Hatari-Quellen
-  die nötigen Funktionen bieten)
-* `src/configuration.c/.h`: neue Einstellungen `bPcLayoutMapping`, `nPcLayoutSource`
+* `tools/patch_keymap.py` (Bauschritt 5a): hängt `KeymapPc_KeyDown/Up` an den Anfang von
+  `Keymap_KeyDown/Up` (keymap.c), `KeymapPc_ShortcutModifier` an den Anfang von
+  `ShortCut_CheckKeys` (shortcut.c), ergänzt `configuration.h/.c` und `src/CMakeLists.txt`
+  und schreibt `src/includes/keymap_pc_cfg.h`.
