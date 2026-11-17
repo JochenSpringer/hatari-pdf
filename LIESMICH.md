@@ -143,6 +143,9 @@ zusätzlich im Protokoll, an welchen Stellen Hatari AltGr und Tasten behandelt.
   für jede Taste protokolliert, was damit geschieht. Bauschritt 5a listet im Protokoll,
   wo Hatari AltGr/Tasten behandelt („Diagnose“).
 - Version: About-Dialog „Hatari v2.8“; neue Prüfmarken für die Dateien in Schritt 3c.
+- Bau: Python wird jetzt in der Bauumgebung installiert (`mingw-w64-x86_64-python`); die Schritte 5a und 5b
+  rufen `python3` bzw. `python` robust auf. Ursache des Abbruchs mit Exit-Code 127 war
+  „python3: command not found“ in Schritt 5a (Version 2.8 wurde dadurch erst mit diesem Stand baubar).
 
 **Hinweis:** Ursache für das Nichtfunktionieren der AltGr-Zeichen in 2.7 war nicht
 nachweisbar (ohne die Hatari-Quellen im Zugriff); 2.8 sperrt die AltGr-Kürzel an der

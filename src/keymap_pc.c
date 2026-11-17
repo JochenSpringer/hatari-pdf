@@ -25,6 +25,7 @@
 */
 const char KeymapPc_fileid[] = "Hatari keymap_pc.c";
 
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>

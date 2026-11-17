@@ -39,6 +39,12 @@ def write(path, text):
         f.write(text)
 
 
+try:
+    sys.stdout.reconfigure(errors="replace")
+except Exception:
+    pass
+
+
 def fail(msg):
     print("FEHLER patch_keymap: " + msg)
     sys.exit(1)
