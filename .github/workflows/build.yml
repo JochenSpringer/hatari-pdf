@@ -29,6 +29,7 @@ jobs:
             mingw-w64-x86_64-cmake mingw-w64-x86_64-gcc
             mingw-w64-x86_64-SDL2 mingw-w64-x86_64-zlib
             mingw-w64-x86_64-libpng
+            mingw-w64-x86_64-python
       - name: 3b - Dateien an die richtige Stelle legen
         run: |
           echo "=== Struktur des Repositorys ==="
@@ -102,11 +103,17 @@ jobs:
       - name: 5 - PDF-Drucker in Hatari einbauen
         run: cp -rv src/. hatari-src/src/
       - name: 5a - PC-Tastaturbelegung einhaengen (keymap.c, shortcut.c, Konfiguration, CMake)
-        run: python3 tools/patch_keymap.py hatari-src
+        run: |
+          py=$(command -v python3 || command -v python)
+          echo "Python: $py"
+          "$py" tools/patch_keymap.py hatari-src
       - name: 5b - Versionsangabe im About-Dialog (2.8)
         run: |
-          python3 - <<'PYEOF'
-          import re
+          py=$(command -v python3 || command -v python)
+          echo "Python: $py"
+          "$py" - <<'PYEOF'
+          import re, sys
+          sys.stdout.reconfigure(errors="replace")
           p = "hatari-src/src/gui-sdl/dlgAbout.c"
           s = open(p, encoding="latin-1").read()
           new = '"Hatari v2.8"'
