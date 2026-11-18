@@ -143,10 +143,15 @@ jobs:
       - name: 8 - prn2pdf.exe bauen
         run: |
           mkdir -p dist
-          gcc -std=gnu99 -O2 -s -DPE_HAVE_ZLIB \
-            -Isrc/pe/include -Isrc/pe/src -Isrc/pe/src/drivers \
-            src/pe/src/*.c src/pe/src/drivers/*.c src/pe/src/fonts/*.c \
-            tools/prn2pdf.c -lz -static -o dist/prn2pdf.exe
+          if [ -f tools/prn2pdf.c ]; then
+            gcc -std=gnu99 -O2 -s -DPE_HAVE_ZLIB \
+              -Isrc/pe/include -Isrc/pe/src -Isrc/pe/src/drivers \
+              src/pe/src/*.c src/pe/src/drivers/*.c src/pe/src/fonts/*.c \
+              tools/prn2pdf.c -lz -static -o dist/prn2pdf.exe
+          else
+            echo "HINWEIS: tools/prn2pdf.c fehlt im Repository - prn2pdf.exe wird uebersprungen."
+            echo "Die Datei aus einem aelteren Stand (Git-Verlauf) nach tools/ zurueckholen."
+          fi
       - name: 9 - Auslieferungsordner packen
         run: |
           mkdir -p dist
