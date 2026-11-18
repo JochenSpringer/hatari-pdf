@@ -28,7 +28,8 @@ nach `.github/workflows/`, alles andere in die Hauptebene neben `.github`.
 Schritt 3c im Bau prüft Dateien mit Prüfmarken und meldet fehlende oder verschobene.
 
 **Hinweis:** `tools/prn2pdf.c` (Schritt 8 des Baus) war in keinem Update-Paket seit v24
-enthalten und muss aus dem bisherigen Repository erhalten bleiben.
+enthalten und muss aus dem bisherigen Repository erhalten bleiben (bei Verlust aus dem Git-Verlauf
+zurückholen). Fehlt sie, entsteht keine `prn2pdf.exe`, der Bau läuft aber durch.
 
 ---
 
@@ -146,6 +147,8 @@ zusätzlich im Protokoll, an welchen Stellen Hatari AltGr und Tasten behandelt.
 - Bau: Python wird jetzt in der Bauumgebung installiert (`mingw-w64-x86_64-python`); die Schritte 5a und 5b
   rufen `python3` bzw. `python` robust auf. Ursache des Abbruchs mit Exit-Code 127 war
   „python3: command not found“ in Schritt 5a (Version 2.8 wurde dadurch erst mit diesem Stand baubar).
+- Bau: Schritt 8 (`prn2pdf.exe`) überspringt sich mit Hinweis, wenn `tools/prn2pdf.c` fehlt, statt den
+  ganzen Bau abzubrechen. Hatari selbst baut fehlerfrei (Schritt 7 geprüft am Bauprotokoll).
 
 **Hinweis:** Ursache für das Nichtfunktionieren der AltGr-Zeichen in 2.7 war nicht
 nachweisbar (ohne die Hatari-Quellen im Zugriff); 2.8 sperrt die AltGr-Kürzel an der

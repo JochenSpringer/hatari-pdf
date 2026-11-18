@@ -671,7 +671,7 @@ static bool CheckEnabled(void)
 		ReleaseAll();
 		if (en)
 		{
-			Uint16 m = (Uint16)SDL_GetModState();
+			int m = (int)SDL_GetModState();
 			memset(&pc, 0, sizeof(pc));
 			pc.lshift = (m & KMOD_LSHIFT) != 0;
 			pc.rshift = (m & KMOD_RSHIFT) != 0;
